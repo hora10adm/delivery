@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Entregas</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-card.pendente .number { color: #f39c12; }
+        .stat-card.em-rota .number { color: #3498db; }
+        .stat-card.finalizada .number { color: #27ae60; }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filters button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filters button:hover {
+            background: #ecf0f1;
+        }
+
+        .filters button.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .entregas-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .entrega-item {
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .entrega-item:hover {
+            background: #f8f9fa;
+        }
+
+        .entrega-item .codigo {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .entrega-item .app {
+            color: #7f8c8d;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .entrega-item .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .status.pendente {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.em_rota {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status.finalizada {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-content h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .modal-content img {
+            max-width: 100%;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+        }
+
+        .modal-close {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #34495e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .modal-close:hover {
+            background: #2c3e50;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .detail-section h3 {
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #3498db;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: -17px;
+            top: 17px;
+            width: 2px;
+            height: calc(100% - 12px);
+            background: #ddd;
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-time {
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+
+        .timeline-desc {
+            color: #2c3e50;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        .map-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .map-link:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .qrcode-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .qrcode-btn:hover {
+            background: #229954;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚚 Painel de Entregas</h1>
+        <div>
+            <a href="/admin/motoboys" style="padding: 10px 20px; background: #9b59b6; color: white; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block;">🏍️ Motoboys</a>
+            <a href="/admin/dashboard" style="padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block;">📊 Dashboard</a>
+            <p style="margin-top: 10px;">Gerencie suas entregas em tempo real</p>
+        </div>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Total de Entregas</h3>
+            <div class="number" id="stat-total">0</div>
+        </div>
+        <div class="stat-card pendente">
+            <h3>Pendentes</h3>
+            <div class="number" id="stat-pendentes">0</div>
+        </div>
+        <div class="stat-card em-rota">
+            <h3>Em Rota</h3>
+            <div class="number" id="stat-em-rota">0</div>
+        </div>
+        <div class="stat-card finalizada">
+            <h3>Finalizadas</h3>
+            <div class="number" id="stat-finalizadas">0</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="card">
+            <div class="card-header">📋 Lista de Entregas</div>
+            <div class="card-body">
+                <div class="filters">
+                    <button class="active" onclick="filtrarEntregas('todas')">Todas</button>
+                    <button onclick="filtrarEntregas('pendente')">Pendentes</button>
+                    <button onclick="filtrarEntregas('em_rota')">Em Rota</button>
+                    <button onclick="filtrarEntregas('finalizada')">Finalizadas</button>
+                </div>
+                <div class="entregas-list" id="entregas-list"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header">🗺️ Mapa de Entregas</div>
+                <div class="card-body">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">➕ Nova Entrega</div>
+                <div class="card-body">
+                    <form id="form-nova-entrega">
+                        <div class="form-group">
+                            <label>Código do Pedido</label>
+                            <input type="text" id="codigo_pedido" required placeholder="Ex: PED001">
+                        </div>
+                        <div class="form-group">
+                            <label>Aplicativo de Delivery</label>
+                            <select id="aplicativo_delivery" required>
+                                <option value="">Selecione...</option>
+                                <option value="iFood">iFood</option>
+                                <option value="Rappi">Rappi</option>
+                                <option value="Uber Eats">Uber Eats</option>
+                                <option value="99Food">99Food</option>
+                                <option value="Zé Delivery">Zé Delivery</option>
+                                <option value="Loggi">Loggi</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bairro (opcional)</label>
+                            <input type="text" id="bairro" placeholder="Ex: Centro">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Criar Entrega</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal QR Code -->
+    <div id="qrcode-modal" class="modal">
+        <div class="modal-content">
+            <h2>📱 QR Code da Entrega</h2>
+            <p id="modal-codigo" style="font-size: 18px; font-weight: bold; color: #667eea; margin-bottom: 15px;"></p>
+            <img id="qrcode-img" src="" alt="QR Code">
+            <p style="margin-top: 15px; color: #7f8c8d; font-size: 14px;">
+                Imprima ou mostre este QR Code para o motoboy escanear
+            </p>
+            <button class="modal-close" onclick="fecharModal('qrcode-modal')">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalhes -->
+    <div id="detalhes-modal" class="modal">
+        <div class="modal-content">
+            <h2>📦 Detalhes da Entrega</h2>
+            <div id="detalhes-content"></div>
+            <button class="modal-close" onclick="fecharModal('detalhes-modal')">Fechar</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let map;
+        let markers = [];
+        let filtroAtual = 'todas';
+
+        function initMap() {
+            map = L.map('map').setView([-7.0, -37.0], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+        }
+
+        async function carregarStats() {
+            try {
+                const response = await fetch(`${API_URL}/dashboard/stats`);
+                const stats = await response.json();
+                document.getElementById('stat-total').textContent = stats.total;
+                document.getElementById('stat-pendentes').textContent = stats.pendentes;
+                document.getElementById('stat-em-rota').textContent = stats.em_rota;
+                document.getElementById('stat-finalizadas').textContent = stats.finalizadas;
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        async function carregarEntregas(status = null) {
+            try {
+                let url = `${API_URL}/entregas`;
+                if (status && status !== 'todas') url += `?status=${status}`;
+                const response = await fetch(url);
+                const entregas = await response.json();
+                exibirEntregas(entregas);
+                atualizarMapa(entregas);
+            } catch (error) {
+                console.error('Erro ao carregar entregas:', error);
+            }
+        }
+
+        function exibirEntregas(entregas) {
+            const lista = document.getElementById('entregas-list');
+            if (entregas.length === 0) {
+                lista.innerHTML = '<p style="text-align:center;color:#7f8c8d;padding:20px;">Nenhuma entrega encontrada</p>';
+                return;
+            }
+            lista.innerHTML = entregas.map(e => `
+                <div class="entrega-item" onclick="mostrarDetalhes('${e.codigo_pedido}')">
+                    <div class="codigo">
+                        ${e.codigo_pedido}
+                        <button class="qrcode-btn" onclick="event.stopPropagation(); mostrarQRCode('${e.codigo_pedido}')">
+                            📱 QR Code
+                        </button>
+                    </div>
+                    <div class="app">📦 ${e.aplicativo_delivery}</div>
+                    <span class="status ${e.status}">${formatarStatus(e.status)}</span>
+                    ${e.motoboy_nome ? `<div style="font-size:12px;color:#7f8c8d;margin-top:5px;">🏍️ ${e.motoboy_nome}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function atualizarMapa(entregas) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            entregas.forEach(e => {
+                if (e.latitude && e.longitude) {
+                    const marker = L.marker([e.latitude, e.longitude]).addTo(map)
+                        .bindPopup(`<b>${e.codigo_pedido}</b><br>${e.aplicativo_delivery}<br>Status: ${formatarStatus(e.status)}`);
+                    markers.push(marker);
+                }
+            });
+            if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        function filtrarEntregas(status) {
+            filtroAtual = status;
+            document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            carregarEntregas(status);
+        }
+
+        function formatarStatus(status) {
+            return {'pendente': 'Pendente', 'em_rota': 'Em Rota', 'finalizada': 'Finalizada'}[status] || status;
+        }
+
+        function formatarData(data) {
+            if (!data) return '-';
+            return new Date(data).toLocaleString('pt-BR');
+        }
+
+        function calcularTempo(inicio, fim) {
+            if (!inicio || !fim) return '-';
+            const diff = new Date(fim) - new Date(inicio);
+            const minutos = Math.floor(diff / 60000);
+            if (minutos < 60) return `${minutos} min`;
+            const horas = Math.floor(minutos / 60);
+            const min = minutos % 60;
+            return `${horas}h ${min}min`;
+        }
+
+        async function mostrarDetalhes(codigo) {
+            try {
+                const response = await fetch(`${API_URL}/entregas/${codigo}`);
+                const entrega = await response.json();
+                
+                let html = `
+                    <div class="detail-section">
+                        <h3>📋 Informações Básicas</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Código:</span>
+                            <span class="detail-value">${entrega.codigo_pedido}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Aplicativo:</span>
+                            <span class="detail-value">${entrega.aplicativo_delivery}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="status ${entrega.status}">${formatarStatus(entrega.status)}</span>
+                        </div>
+                        ${entrega.motoboy_nome ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Motoboy:</span>
+                            <span class="detail-value">🏍️ ${entrega.motoboy_nome}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="detail-section">
+                        <h3>⏱️ Timeline da Entrega</h3>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-time">${formatarData(entrega.data_criacao)}</div>
+                                <div class="timeline-desc">✅ Entrega criada no sistema</div>
+                            </div>
+                            ${entrega.data_inicio ? `
+                            <div class="timeline-item">
+                                <div class="timeline-time">${formatarData(entrega.data_inicio)}</div>
+                                <div class="timeline-desc">🏍️ Motoboy escaneou QR Code e iniciou entrega</div>
+                            </div>
+                            ` : ''}
+                            ${entrega.data_finalizacao ? `
+                            <div class="timeline-item">
+                                <div class="timeline-time">${formatarData(entrega.data_finalizacao)}</div>
+                                <div class="timeline-desc">📦 Entrega finalizada</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    ${entrega.data_inicio && entrega.data_finalizacao ? `
+                    <div class="detail-section">
+                        <h3>⏱️ Tempo de Entrega</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Duração total:</span>
+                            <span class="detail-value">${calcularTempo(entrega.data_inicio, entrega.data_finalizacao)}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${entrega.latitude && entrega.longitude ? `
+                    <div class="detail-section">
+                        <h3>📍 Localização da Entrega</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Endereço:</span>
+                            <span class="detail-value" style="font-size: 13px;">${entrega.endereco_entrega || 'Carregando...'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Coordenadas:</span>
+                            <span class="detail-value">${entrega.latitude.toFixed(6)}, ${entrega.longitude.toFixed(6)}</span>
+                        </div>
+                        <a href="https://www.google.com/maps?q=${entrega.latitude},${entrega.longitude}" target="_blank" class="map-link">
+                            🗺️ Abrir no Google Maps
+                        </a>
+                    </div>
+                    ` : ''}
+                `;
+
+                document.getElementById('detalhes-content').innerHTML = html;
+                document.getElementById('detalhes-modal').classList.add('show');
+            } catch (error) {
+                console.error('Erro ao carregar detalhes:', error);
+                alert('Erro ao carregar detalhes da entrega');
+            }
+        }
+
+        document.getElementById('form-nova-entrega').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dados = {
+                codigo_pedido: document.getElementById('codigo_pedido').value,
+                aplicativo_delivery: document.getElementById('aplicativo_delivery').value,
+                bairro: document.getElementById('bairro').value
+            };
+            try {
+                const response = await fetch(`${API_URL}/entregas`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(dados)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ Entrega criada com sucesso!');
+                    document.getElementById('form-nova-entrega').reset();
+                    carregarEntregas(filtroAtual);
+                    carregarStats();
+                    mostrarQRCodeComImagem(result.codigo_pedido, result.qrcode);
+                } else {
+                    alert('❌ Erro: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Erro ao criar entrega');
+                console.error(error);
+            }
+        });
+
+        async function mostrarQRCode(codigo) {
+            try {
+                const response = await fetch(`${API_URL}/entregas/${codigo}/qrcode`);
+                const result = await response.json();
+                if (result.success) mostrarQRCodeComImagem(codigo, result.qrcode);
+            } catch (error) {
+                console.error('Erro ao gerar QR Code:', error);
+            }
+        }
+
+        function mostrarQRCodeComImagem(codigo, qrcodeBase64) {
+            document.getElementById('modal-codigo').textContent = codigo;
+            document.getElementById('qrcode-img').src = `data:image/png;base64,${qrcodeBase64}`;
+            document.getElementById('qrcode-modal').classList.add('show');
+        }
+
+        function fecharModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        }
+
+        window.onload = () => {
+            initMap();
+            carregarStats();
+            carregarEntregas();
+            setInterval(() => {
+                carregarStats();
+                carregarEntregas(filtroAtual);
+            }, 30000);
+        };
+    </script>
+</body>
+</html>

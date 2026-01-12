@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entregas - Motoboy</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding-bottom: 80px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header .motoboy-name {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        #qr-reader {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .entrega-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .entrega-info .label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .entrega-info .value {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .entrega-info .codigo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .status-badge.pendente {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.em_rota {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-badge.finalizada {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .location-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .quick-actions {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+        }
+
+        .quick-actions button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>🏍️ Minhas Entregas</h1>
+                <div class="motoboy-name" id="motoboy-header">Olá, Motoboy!</div>
+            </div>
+            <button onclick="logout()" style="padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid white; color: white; border-radius: 4px; cursor: pointer; font-size: 14px;">Sair</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Seção Scanner QR Code -->
+        <div class="card hidden" id="section-scanner">
+            <div class="card-header">📷 Escanear QR Code</div>
+            <div class="card-body">
+                <div id="qr-reader"></div>
+                <button class="btn btn-secondary" onclick="pararScanner()" style="margin-top: 15px;">Parar Scanner</button>
+                <div class="alert alert-info" style="margin-top: 15px;">
+                    Aponte a câmera para o QR Code do pedido
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Detalhes da Entrega -->
+        <div class="card hidden" id="section-entrega">
+            <div class="card-header">📦 Detalhes da Entrega</div>
+            <div class="card-body">
+                <div id="entrega-detalhes">
+                    <!-- Será preenchido dinamicamente -->
+                </div>
+                
+                <div id="botoes-entrega">
+                    <!-- Botões serão inseridos aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Carregando...</p>
+        </div>
+
+        <!-- Mensagens -->
+        <div id="mensagens"></div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let html5QrCode;
+        let entregaAtual = null;
+        let motoboy = localStorage.getItem('motoboy_nome') || '';
+        let localizacaoAtual = null;
+
+        // Verificar login
+        if (!localStorage.getItem('motoboy_logged')) {
+            window.location.href = '/motoboy/login';
+        }
+
+        // Inicializar
+        window.onload = () => {
+            motoboy = localStorage.getItem('motoboy_nome');
+            document.getElementById('motoboy-header').textContent = `Olá, ${motoboy}!`;
+            
+            // Verificar entregas em andamento
+            verificarEntregasEmAndamento();
+            
+            // Obter localização
+            obterLocalizacao();
+        };
+
+        // Verificar se tem entregas em andamento
+        async function verificarEntregasEmAndamento() {
+            try {
+                const response = await fetch(`${API_URL}/motoboy/entregas/${motoboy}`);
+                const entregas = await response.json();
+                
+                if (entregas.length > 0) {
+                    // Mostrar modal com entregas pendentes
+                    mostrarEntregasPendentes(entregas);
+                } else {
+                    // Não tem entregas pendentes, mostrar scanner
+                    mostrarSecao('scanner');
+                    iniciarScanner();
+                }
+            } catch (error) {
+                console.error('Erro ao verificar entregas:', error);
+                mostrarSecao('scanner');
+                iniciarScanner();
+            }
+        }
+
+        // Mostrar modal com entregas pendentes
+        function mostrarEntregasPendentes(entregas) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                padding: 20px;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                max-width: 500px;
+                width: 100%;
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+            
+            let html = `
+                <h2 style="color: #FF1493; margin-bottom: 20px;">⚠️ Entregas Pendentes</h2>
+                <p style="color: #7f8c8d; margin-bottom: 20px;">Você tem ${entregas.length} entrega(s) em andamento:</p>
+            `;
+            
+            entregas.forEach(e => {
+                html += `
+                    <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #FF1493; cursor: pointer;" onclick="selecionarEntrega('${e.codigo_pedido}')">
+                        <div style="font-weight: bold; font-size: 18px; color: #2c3e50;">${e.codigo_pedido}</div>
+                        <div style="color: #7f8c8d; font-size: 14px;">📦 ${e.aplicativo_delivery}</div>
+                        <div style="color: #FF4500; font-size: 12px; margin-top: 5px;">Iniciada: ${new Date(e.data_inicio).toLocaleString('pt-BR')}</div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <button style="width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;" onclick="fecharModalPendentes()">
+                    Nova Entrega (Scanner)
+                </button>
+            `;
+            
+            content.innerHTML = html;
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            window.modalPendentes = modal;
+        }
+
+        function fecharModalPendentes() {
+            if (window.modalPendentes) {
+                window.modalPendentes.remove();
+            }
+            mostrarSecao('scanner');
+            iniciarScanner();
+        }
+
+        async function selecionarEntrega(codigo) {
+            if (window.modalPendentes) {
+                window.modalPendentes.remove();
+            }
+            mostrarLoading(true);
+            
+            try {
+                const response = await fetch(`${API_URL}/entregas/${codigo}`);
+                const entrega = await response.json();
+                
+                if (entrega.success === false) {
+                    mostrarMensagem('Erro ao carregar entrega', 'error');
+                    return;
+                }
+                
+                entregaAtual = entrega;
+                mostrarDetalhesEntrega(entrega);
+            } catch (error) {
+                console.error('Erro ao buscar entrega:', error);
+                mostrarMensagem('Erro ao carregar entrega', 'error');
+            } finally {
+                mostrarLoading(false);
+            }
+        }
+
+        // Salvar nome do motoboy
+        // Iniciar scanner QR
+        function iniciarScanner() {
+            html5QrCode = new Html5Qrcode("qr-reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                console.error('Erro ao iniciar scanner:', err);
+                mostrarMensagem('Erro ao acessar a câmera. Verifique as permissões.', 'error');
+            });
+        }
+
+        // Parar scanner
+        function pararScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    console.log('Scanner parado');
+                }).catch(err => {
+                    console.error('Erro ao parar scanner:', err);
+                });
+            }
+        }
+
+        // Sucesso ao escanear
+        async function onScanSuccess(codigoPedido) {
+            pararScanner();
+            mostrarLoading(true);
+            
+            try {
+                const response = await fetch(`${API_URL}/entregas/${codigoPedido}`);
+                const entrega = await response.json();
+                
+                if (entrega.success === false) {
+                    mostrarMensagem('Pedido não encontrado!', 'error');
+                    setTimeout(() => {
+                        mostrarSecao('scanner');
+                        iniciarScanner();
+                    }, 2000);
+                    return;
+                }
+                
+                entregaAtual = entrega;
+                mostrarDetalhesEntrega(entrega);
+                
+            } catch (error) {
+                console.error('Erro ao buscar entrega:', error);
+                mostrarMensagem('Erro ao buscar entrega', 'error');
+            } finally {
+                mostrarLoading(false);
+            }
+        }
+
+        function onScanError(err) {
+            // Ignorar erros de scan contínuo
+        }
+
+        // Mostrar detalhes da entrega
+        function mostrarDetalhesEntrega(entrega) {
+            mostrarSecao('entrega');
+            
+            const statusMap = {
+                'pendente': 'Pendente',
+                'em_rota': 'Em Rota',
+                'finalizada': 'Finalizada'
+            };
+            
+            document.getElementById('entrega-detalhes').innerHTML = `
+                <div class="entrega-info">
+                    <div class="codigo">${entrega.codigo_pedido}</div>
+                    <div class="label">Aplicativo</div>
+                    <div class="value">📦 ${entrega.aplicativo_delivery}</div>
+                </div>
+                
+                <div class="entrega-info">
+                    <div class="label">Status</div>
+                    <span class="status-badge ${entrega.status}">${statusMap[entrega.status]}</span>
+                </div>
+                
+                ${entrega.motoboy_nome ? `
+                <div class="entrega-info">
+                    <div class="label">Motoboy</div>
+                    <div class="value">🏍️ ${entrega.motoboy_nome}</div>
+                </div>
+                ` : ''}
+            `;
+            
+            // Botões baseados no status
+            let botoes = '';
+            if (entrega.status === 'pendente') {
+                botoes = `
+                    <button class="btn btn-primary" onclick="iniciarEntrega()">Iniciar Entrega</button>
+                    <button class="btn btn-secondary" onclick="voltarScanner()">Voltar</button>
+                `;
+            } else if (entrega.status === 'em_rota') {
+                botoes = `
+                    <button class="btn btn-success" onclick="finalizarEntrega()">✓ Finalizar Entrega</button>
+                    <button class="btn btn-secondary" onclick="voltarScanner()">Voltar</button>
+                `;
+            } else {
+                botoes = `
+                    <div class="alert alert-success">Entrega já finalizada!</div>
+                    <button class="btn btn-secondary" onclick="voltarScanner()">Escanear Outra</button>
+                `;
+            }
+            
+            document.getElementById('botoes-entrega').innerHTML = botoes;
+        }
+
+        // Iniciar entrega
+        async function iniciarEntrega() {
+            mostrarLoading(true);
+            
+            try {
+                const response = await fetch(`${API_URL}/entregas/${entregaAtual.codigo_pedido}/iniciar`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        motoboy_nome: motoboy
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    mostrarMensagem('Entrega iniciada com sucesso!', 'success');
+                    entregaAtual.status = 'em_rota';
+                    entregaAtual.motoboy_nome = motoboy;
+                    mostrarDetalhesEntrega(entregaAtual);
+                } else {
+                    mostrarMensagem('Erro ao iniciar entrega', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem('Erro ao iniciar entrega', 'error');
+            } finally {
+                mostrarLoading(false);
+            }
+        }
+
+        // Finalizar entrega
+        async function finalizarEntrega() {
+            if (!localizacaoAtual) {
+                mostrarMensagem('Aguarde... obtendo localização', 'info');
+                await obterLocalizacao();
+                if (!localizacaoAtual) {
+                    mostrarMensagem('Não foi possível obter a localização. Ative o GPS.', 'error');
+                    return;
+                }
+            }
+            
+            if (!confirm('Confirma a finalização desta entrega?')) {
+                return;
+            }
+            
+            mostrarLoading(true);
+            
+            try {
+                const response = await fetch(`${API_URL}/entregas/${entregaAtual.codigo_pedido}/finalizar`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        latitude: localizacaoAtual.latitude,
+                        longitude: localizacaoAtual.longitude
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    mostrarMensagem('✓ Entrega finalizada com sucesso!', 'success');
+                    setTimeout(() => {
+                        voltarScanner();
+                    }, 2000);
+                } else {
+                    mostrarMensagem('Erro ao finalizar entrega', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem('Erro ao finalizar entrega', 'error');
+            } finally {
+                mostrarLoading(false);
+            }
+        }
+
+        // Obter localização
+        async function obterLocalizacao() {
+            return new Promise((resolve) => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            localizacaoAtual = {
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude
+                            };
+                            console.log('Localização obtida:', localizacaoAtual);
+                            resolve(true);
+                        },
+                        (error) => {
+                            console.error('Erro ao obter localização:', error);
+                            resolve(false);
+                        }
+                    );
+                } else {
+                    console.error('Geolocalização não suportada');
+                    resolve(false);
+                }
+            });
+        }
+
+        // Voltar ao scanner
+        function voltarScanner() {
+            entregaAtual = null;
+            mostrarSecao('scanner');
+            iniciarScanner();
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Deseja realmente sair?')) {
+                localStorage.removeItem('motoboy_logged');
+                localStorage.removeItem('motoboy_nome');
+                localStorage.removeItem('motoboy_id');
+                window.location.href = '/motoboy/login';
+            }
+        }
+
+        // Mostrar seção
+        function mostrarSecao(secao) {
+            document.getElementById('section-scanner').classList.add('hidden');
+            document.getElementById('section-entrega').classList.add('hidden');
+            
+            document.getElementById(`section-${secao}`).classList.remove('hidden');
+        }
+
+        // Mostrar loading
+        function mostrarLoading(show) {
+            if (show) {
+                document.getElementById('loading').classList.remove('hidden');
+            } else {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        // Mostrar mensagem
+        function mostrarMensagem(texto, tipo) {
+            const div = document.createElement('div');
+            div.className = `alert alert-${tipo}`;
+            div.textContent = texto;
+            
+            const container = document.getElementById('mensagens');
+            container.appendChild(div);
+            
+            setTimeout(() => {
+                div.remove();
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

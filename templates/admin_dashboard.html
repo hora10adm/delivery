@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Rede Hora 10</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #FF1493 50%, #FF4500 75%, #FF8C00 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            height: 50px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-info .nome {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .logout-btn {
+            margin-top: 5px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid white;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filters h3 {
+            color: #4B0082;
+            margin-bottom: 15px;
+        }
+
+        .filters-row {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+        }
+
+        .filter-group {
+            flex: 1;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4B0082;
+            font-weight: 500;
+        }
+
+        .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn-filtrar {
+            padding: 10px 30px;
+            background: linear-gradient(135deg, #FF1493 0%, #FF4500 100%);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .btn-filtrar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255,20,147,0.4);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #4B0082;
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid;
+            border-image: linear-gradient(90deg, #FF1493, #FF4500) 1;
+            padding-bottom: 10px;
+        }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .ranking-item:nth-child(1) { border-left-color: #FFD700; }
+        .ranking-item:nth-child(2) { border-left-color: #C0C0C0; }
+        .ranking-item:nth-child(3) { border-left-color: #CD7F32; }
+        .ranking-item:nth-child(n+4) { border-left-color: #ddd; }
+
+        .ranking-position {
+            font-weight: bold;
+            font-size: 20px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .ranking-position:nth-child(1) { color: #FFD700; }
+
+        .ranking-name {
+            flex: 1;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .ranking-value {
+            font-weight: bold;
+            color: #FF1493;
+            font-size: 16px;
+        }
+
+        .ranking-time {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #FF1493 0%, #FF4500 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .filters-row {
+                flex-direction: column;
+            }
+
+            .cards-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="/static/img/logo.png" alt="Rede Hora 10" class="logo">
+            <h1>Dashboard Administrativo</h1>
+        </div>
+        <div class="nav-buttons">
+            <a href="/">📦 Entregas</a>
+            <a href="/admin/motoboys">🏍️ Motoboys</a>
+            <button class="logout-btn" onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <div class="filters">
+        <h3>📅 Filtrar por Período</h3>
+        <div class="filters-row">
+            <div class="filter-group">
+                <label>Data Início</label>
+                <input type="date" id="data-inicio">
+            </div>
+            <div class="filter-group">
+                <label>Data Fim</label>
+                <input type="date" id="data-fim">
+            </div>
+            <button class="btn-filtrar" onclick="aplicarFiltros()">Filtrar</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="cards-container">
+            <!-- Card 1: Entregas por Entregador -->
+            <div class="card">
+                <h2>📊 Entregas por Entregador</h2>
+                <div id="entregas-entregador-content"></div>
+            </div>
+
+            <!-- Card 2: Ranking de Melhores Tempos -->
+            <div class="card">
+                <h2>🏆 Ranking - Melhores Tempos</h2>
+                <div id="ranking-tempos-content"></div>
+            </div>
+
+            <!-- Card 3: Ranking de Bairros -->
+            <div class="card">
+                <h2>📍 Ranking - Bairros com Mais Pedidos</h2>
+                <div id="ranking-bairros-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+
+        // Verificar login
+        if (!localStorage.getItem('admin_logged')) {
+            window.location.href = '/admin/login';
+        }
+
+        // Exibir nome do admin
+        const nomeAdmin = localStorage.getItem('admin_nome');
+        if (nomeAdmin) {
+            document.getElementById('admin-nome').textContent = nomeAdmin;
+        }
+
+        // Definir datas padrão (últimos 30 dias)
+        const hoje = new Date();
+        const trintaDiasAtras = new Date(hoje);
+        trintaDiasAtras.setDate(hoje.getDate() - 30);
+
+        document.getElementById('data-fim').valueAsDate = hoje;
+        document.getElementById('data-inicio').valueAsDate = trintaDiasAtras;
+
+        function logout() {
+            localStorage.removeItem('admin_logged');
+            localStorage.removeItem('admin_nome');
+            window.location.href = '/admin/login';
+        }
+
+        function formatarTempo(minutos) {
+            if (!minutos) return '-';
+            if (minutos < 60) return `${Math.round(minutos)} min`;
+            const horas = Math.floor(minutos / 60);
+            const min = Math.round(minutos % 60);
+            return `${horas}h ${min}min`;
+        }
+
+        async function carregarEntregasPorEntregador() {
+            try {
+                const dataInicio = document.getElementById('data-inicio').value;
+                const dataFim = document.getElementById('data-fim').value;
+
+                const response = await fetch(`${API_URL}/admin/stats/entregadores?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+                const dados = await response.json();
+
+                const container = document.getElementById('entregas-entregador-content');
+
+                if (dados.length === 0) {
+                    container.innerHTML = '<div class="empty-state">📦 Nenhuma entrega finalizada no período</div>';
+                    return;
+                }
+
+                let html = '';
+                dados.forEach((item, index) => {
+                    html += `
+                        <div class="ranking-item">
+                            <div class="ranking-position">${index + 1}º</div>
+                            <div class="ranking-name">🏍️ ${item.motoboy_nome || 'Sem nome'}</div>
+                            <div>
+                                <div class="ranking-value">${item.total_entregas} entregas</div>
+                                <div class="ranking-time">Tempo médio: ${formatarTempo(item.tempo_medio_minutos)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar entregas por entregador:', error);
+            }
+        }
+
+        async function carregarRankingTempos() {
+            try {
+                const dataInicio = document.getElementById('data-inicio').value;
+                const dataFim = document.getElementById('data-fim').value;
+
+                const response = await fetch(`${API_URL}/admin/stats/ranking-tempos?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+                const dados = await response.json();
+
+                const container = document.getElementById('ranking-tempos-content');
+
+                if (dados.length === 0) {
+                    container.innerHTML = '<div class="empty-state">🏆 Sem dados suficientes (mínimo 3 entregas por motoboy)</div>';
+                    return;
+                }
+
+                let html = '';
+                dados.forEach((item, index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    html += `
+                        <div class="ranking-item">
+                            <div class="ranking-position">${medal || (index + 1) + 'º'}</div>
+                            <div class="ranking-name">${item.motoboy_nome || 'Sem nome'}</div>
+                            <div>
+                                <div class="ranking-value">${formatarTempo(item.tempo_medio_minutos)}</div>
+                                <div class="ranking-time">${item.total_entregas} entregas | Melhor: ${formatarTempo(item.melhor_tempo_minutos)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar ranking de tempos:', error);
+            }
+        }
+
+        async function carregarRankingBairros() {
+            try {
+                const dataInicio = document.getElementById('data-inicio').value;
+                const dataFim = document.getElementById('data-fim').value;
+
+                const response = await fetch(`${API_URL}/admin/stats/ranking-bairros?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+                const dados = await response.json();
+
+                const container = document.getElementById('ranking-bairros-content');
+
+                if (dados.length === 0) {
+                    container.innerHTML = '<div class="empty-state">📍 Nenhum bairro registrado no período</div>';
+                    return;
+                }
+
+                let html = '';
+                dados.forEach((item, index) => {
+                    html += `
+                        <div class="ranking-item">
+                            <div class="ranking-position">${index + 1}º</div>
+                            <div class="ranking-name">📍 ${item.bairro}</div>
+                            <div class="ranking-value">${item.total_entregas} ${item.total_entregas === 1 ? 'pedido' : 'pedidos'}</div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Erro ao carregar ranking de bairros:', error);
+            }
+        }
+
+        function aplicarFiltros() {
+            carregarEntregasPorEntregador();
+            carregarRankingTempos();
+            carregarRankingBairros();
+        }
+
+        // Carregar dados iniciais
+        window.onload = () => {
+            aplicarFiltros();
+            
+            // Atualizar a cada 2 minutos
+            setInterval(aplicarFiltros, 120000);
+        };
+    </script>
+</body>
+</html>
