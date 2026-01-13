@@ -894,27 +894,30 @@
                 `;
 
                 document.getElementById('detalhes-content').innerHTML = html;
-                
-                // Adicionar botão cancelar se a entrega não estiver cancelada ou finalizada
-                const modalContent = document.querySelector('#detalhes-modal .modal-content');
-                const botaoFechar = modalContent.querySelector('.modal-close');
-                
-                // Remover botão cancelar anterior se existir
-                const botaoCancelarAntigo = document.getElementById('btn-cancelar-entrega');
-                if (botaoCancelarAntigo) botaoCancelarAntigo.remove();
+                document.getElementById('detalhes-modal').classList.add('show');
                 
                 // Adicionar botão cancelar se aplicável
-                if (entrega.status !== 'cancelada' && entrega.status !== 'finalizada') {
-                    const botaoCancelar = document.createElement('button');
-                    botaoCancelar.id = 'btn-cancelar-entrega';
-                    botaoCancelar.className = 'modal-close';
-                    botaoCancelar.style.cssText = 'background: #e74c3c; margin-top: 10px;';
-                    botaoCancelar.textContent = '🚫 Cancelar Entrega';
-                    botaoCancelar.onclick = () => abrirModalCancelar(entrega.codigo_pedido);
-                    modalContent.insertBefore(botaoCancelar, botaoFechar);
-                }
-                
-                document.getElementById('detalhes-modal').classList.add('show');
+                setTimeout(() => {
+                    const modalContent = document.querySelector('#detalhes-modal .modal-content');
+                    const botaoFechar = modalContent.querySelector('.modal-close');
+                    
+                    // Remover botão cancelar anterior
+                    const botaoAntigo = document.getElementById('btn-cancelar-entrega');
+                    if (botaoAntigo) botaoAntigo.remove();
+                    
+                    // Adicionar novo botão se não estiver cancelada ou finalizada
+                    if (entrega.status !== 'cancelada' && entrega.status !== 'finalizada') {
+                        const btnCancelar = document.createElement('button');
+                        btnCancelar.id = 'btn-cancelar-entrega';
+                        btnCancelar.style.cssText = 'width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px;';
+                        btnCancelar.innerHTML = '🚫 Cancelar Entrega';
+                        btnCancelar.onclick = function() {
+                            document.getElementById('detalhes-modal').classList.remove('show');
+                            abrirModalCancelar(entrega.codigo_pedido);
+                        };
+                        modalContent.insertBefore(btnCancelar, botaoFechar);
+                    }
+                }, 100);
             } catch (error) {
                 console.error('Erro ao carregar detalhes:', error);
                 alert('Erro ao carregar detalhes da entrega');
