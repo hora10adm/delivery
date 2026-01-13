@@ -35,6 +35,9 @@ def init_db():
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 data_inicio TIMESTAMP,
                 data_finalizacao TIMESTAMP,
+                data_cancelamento TIMESTAMP,
+                motivo_cancelamento TEXT,
+                pedido_pago INTEGER DEFAULT 0,
                 latitude REAL,
                 longitude REAL,
                 endereco_entrega TEXT
@@ -470,6 +473,36 @@ def ranking_bairros():
     
     resultados = db.execute(query, params).fetchall()
     return jsonify([dict(r) for r in resultados])
+
+# API - Cancelar entrega
+@app.route('/api/entregas/<codigo_pedido>/cancelar', methods=['PUT'])
+def cancelar_entrega(codigo_pedido):
+    try:
+        data = request.json
+        db = get_db()
+        
+        # Verificar senha admin
+        senha_hash = hashlib.sha256(data['senha_admin'].encode()).hexdigest()
+        admin = db.execute('SELECT * FROM usuarios WHERE password = ?', (senha_hash,)).fetchone()
+        
+        if not admin:
+            return jsonify({'success': False, 'message': 'Senha administrativa incorreta'}), 401
+        
+        # Cancelar entrega
+        db.execute('''
+            UPDATE entregas 
+            SET status = 'cancelada',
+                motivo_cancelamento = ?,
+                pedido_pago = ?,
+                data_cancelamento = ?
+            WHERE codigo_pedido = ?
+        ''', (data['motivo'], data.get('pedido_pago', False), datetime.now(), codigo_pedido))
+        
+        db.commit()
+        
+        return jsonify({'success': True, 'message': 'Entrega cancelada com sucesso'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # API - CRUD Motoboys
 @app.route('/api/admin/motoboys', methods=['GET'])
