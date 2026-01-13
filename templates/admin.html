@@ -170,6 +170,11 @@
             color: #155724;
         }
 
+        .status.cancelada {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         .form-group {
             margin-bottom: 15px;
         }
@@ -439,6 +444,27 @@
         <div class="card">
             <div class="card-header">📋 Lista de Entregas</div>
             <div class="card-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <input 
+                        type="text" 
+                        id="busca-pedido" 
+                        placeholder="🔍 Buscar por código do pedido..." 
+                        style="flex: 1; min-width: 200px; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        onkeyup="buscarPorCodigo()"
+                    >
+                    <input 
+                        type="date" 
+                        id="filtro-data" 
+                        style="padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        onchange="filtrarPorData()"
+                    >
+                    <button 
+                        onclick="limparFiltros()" 
+                        style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"
+                    >
+                        🔄 Limpar
+                    </button>
+                </div>
                 <div class="filters">
                     <button class="active" onclick="filtrarEntregas('todas')">Todas</button>
                     <button onclick="filtrarEntregas('pendente')">Pendentes</button>
@@ -479,8 +505,24 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Bairro (opcional)</label>
-                            <input type="text" id="bairro" placeholder="Ex: Centro">
+                            <label>Quantidade de Pedidos</label>
+                            <select id="quantidade_pedidos" required>
+                                <option value="">Selecione...</option>
+                                <option value="Simples">Simples</option>
+                                <option value="Duplo">Duplo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Entrega</label>
+                            <select id="tipo_entrega" required onchange="toggleValorTurbo()">
+                                <option value="">Selecione...</option>
+                                <option value="Simples">Simples</option>
+                                <option value="Turbo">Turbo</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="campo-valor-turbo" style="display: none;">
+                            <label>Valor Turbo (R$)</label>
+                            <input type="number" id="valor_turbo" step="0.01" placeholder="Ex: 15.00">
                         </div>
                         <button type="submit" class="btn btn-primary">Criar Entrega</button>
                     </form>
@@ -511,12 +553,79 @@
         </div>
     </div>
 
+    <!-- Modal Cancelar Entrega -->
+    <div id="cancelar-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="color: #e74c3c;">🚫 Cancelar Entrega</h2>
+            <form id="form-cancelar">
+                <input type="hidden" id="cancelar-codigo">
+                
+                <div class="form-group">
+                    <label>Motivo do Cancelamento *</label>
+                    <textarea 
+                        id="motivo-cancelamento" 
+                        required 
+                        rows="4"
+                        placeholder="Descreva o motivo do cancelamento..."
+                        style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input 
+                            type="checkbox" 
+                            id="pedido-pago"
+                            style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;"
+                        >
+                        <span>Pedido foi pago ao motoboy</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Senha Administrativa *</label>
+                    <input 
+                        type="password" 
+                        id="senha-admin-cancelar" 
+                        required 
+                        placeholder="Digite a senha de administrador"
+                        style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px;"
+                    >
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="modal-close" onclick="fecharModal('cancelar-modal')" style="flex: 1;">Voltar</button>
+                    <button type="submit" style="flex: 1; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        Confirmar Cancelamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const API_URL = window.location.origin + '/api';
         let map;
         let markers = [];
         let filtroAtual = 'todas';
+        let entregasCompletas = []; // Armazena todas as entregas
+        let entregasFiltradas = []; // Armazenas as entregas após filtro
+
+        function toggleValorTurbo() {
+            const tipoEntrega = document.getElementById('tipo_entrega').value;
+            const campoValor = document.getElementById('campo-valor-turbo');
+            const inputValor = document.getElementById('valor_turbo');
+            
+            if (tipoEntrega === 'Turbo') {
+                campoValor.style.display = 'block';
+                inputValor.required = true;
+            } else {
+                campoValor.style.display = 'none';
+                inputValor.required = false;
+                inputValor.value = '';
+            }
+        }
 
         function initMap() {
             map = L.map('map').setView([-7.0, -37.0], 12);
@@ -544,6 +653,10 @@
                 if (status && status !== 'todas') url += `?status=${status}`;
                 const response = await fetch(url);
                 const entregas = await response.json();
+                
+                entregasCompletas = entregas; // Salvar todas as entregas
+                entregasFiltradas = entregas;
+                
                 exibirEntregas(entregas);
                 atualizarMapa(entregas);
             } catch (error) {
@@ -595,8 +708,54 @@
             carregarEntregas(status);
         }
 
+        function buscarPorCodigo() {
+            const busca = document.getElementById('busca-pedido').value.toLowerCase();
+            const dataFiltro = document.getElementById('filtro-data').value;
+            
+            let resultados = entregasCompletas;
+            
+            // Filtrar por código
+            if (busca) {
+                resultados = resultados.filter(e => 
+                    e.codigo_pedido.toLowerCase().includes(busca)
+                );
+            }
+            
+            // Filtrar por data
+            if (dataFiltro) {
+                resultados = resultados.filter(e => {
+                    const dataEntrega = new Date(e.data_criacao).toISOString().split('T')[0];
+                    return dataEntrega === dataFiltro;
+                });
+            }
+            
+            entregasFiltradas = resultados;
+            exibirEntregas(resultados);
+            atualizarMapa(resultados);
+        }
+
+        function filtrarPorData() {
+            buscarPorCodigo(); // Usa a mesma lógica
+        }
+
+        function limparFiltros() {
+            document.getElementById('busca-pedido').value = '';
+            document.getElementById('filtro-data').value = obterDataAtual();
+            buscarPorCodigo();
+        }
+
+        function obterDataAtual() {
+            const hoje = new Date();
+            return hoje.toISOString().split('T')[0];
+        }
+
         function formatarStatus(status) {
-            return {'pendente': 'Pendente', 'em_rota': 'Em Rota', 'finalizada': 'Finalizada'}[status] || status;
+            return {
+                'pendente': 'Pendente', 
+                'em_rota': 'Em Rota', 
+                'finalizada': 'Finalizada',
+                'cancelada': 'Cancelada'
+            }[status] || status;
         }
 
         function formatarData(data) {
@@ -630,6 +789,24 @@
                             <span class="detail-label">Aplicativo:</span>
                             <span class="detail-value">${entrega.aplicativo_delivery}</span>
                         </div>
+                        ${entrega.quantidade_pedidos ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Quantidade:</span>
+                            <span class="detail-value">${entrega.quantidade_pedidos}</span>
+                        </div>
+                        ` : ''}
+                        ${entrega.tipo_entrega ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Tipo de Entrega:</span>
+                            <span class="detail-value">${entrega.tipo_entrega}</span>
+                        </div>
+                        ` : ''}
+                        ${entrega.valor_turbo ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Valor Turbo:</span>
+                            <span class="detail-value">R$ ${parseFloat(entrega.valor_turbo).toFixed(2)}</span>
+                        </div>
+                        ` : ''}
                         <div class="detail-row">
                             <span class="detail-label">Status:</span>
                             <span class="status ${entrega.status}">${formatarStatus(entrega.status)}</span>
@@ -641,6 +818,24 @@
                         </div>
                         ` : ''}
                     </div>
+
+                    ${entrega.status === 'cancelada' ? `
+                    <div class="detail-section" style="background: #fee; border-left-color: #e74c3c;">
+                        <h3 style="color: #e74c3c;">🚫 Informações do Cancelamento</h3>
+                        <div class="detail-row">
+                            <span class="detail-label">Data:</span>
+                            <span class="detail-value">${formatarData(entrega.data_cancelamento)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Motivo:</span>
+                            <span class="detail-value">${entrega.motivo_cancelamento || 'Não informado'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Pedido Pago:</span>
+                            <span class="detail-value">${entrega.pedido_pago ? '✅ Sim' : '❌ Não'}</span>
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <div class="detail-section">
                         <h3>⏱️ Timeline da Entrega</h3>
@@ -677,6 +872,12 @@
                     ${entrega.latitude && entrega.longitude ? `
                     <div class="detail-section">
                         <h3>📍 Localização da Entrega</h3>
+                        ${entrega.bairro ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Bairro:</span>
+                            <span class="detail-value">📍 ${entrega.bairro}</span>
+                        </div>
+                        ` : ''}
                         <div class="detail-row">
                             <span class="detail-label">Endereço:</span>
                             <span class="detail-value" style="font-size: 13px;">${entrega.endereco_entrega || 'Carregando...'}</span>
@@ -693,6 +894,26 @@
                 `;
 
                 document.getElementById('detalhes-content').innerHTML = html;
+                
+                // Adicionar botão cancelar se a entrega não estiver cancelada ou finalizada
+                const modalContent = document.querySelector('#detalhes-modal .modal-content');
+                const botaoFechar = modalContent.querySelector('.modal-close');
+                
+                // Remover botão cancelar anterior se existir
+                const botaoCancelarAntigo = document.getElementById('btn-cancelar-entrega');
+                if (botaoCancelarAntigo) botaoCancelarAntigo.remove();
+                
+                // Adicionar botão cancelar se aplicável
+                if (entrega.status !== 'cancelada' && entrega.status !== 'finalizada') {
+                    const botaoCancelar = document.createElement('button');
+                    botaoCancelar.id = 'btn-cancelar-entrega';
+                    botaoCancelar.className = 'modal-close';
+                    botaoCancelar.style.cssText = 'background: #e74c3c; margin-top: 10px;';
+                    botaoCancelar.textContent = '🚫 Cancelar Entrega';
+                    botaoCancelar.onclick = () => abrirModalCancelar(entrega.codigo_pedido);
+                    modalContent.insertBefore(botaoCancelar, botaoFechar);
+                }
+                
                 document.getElementById('detalhes-modal').classList.add('show');
             } catch (error) {
                 console.error('Erro ao carregar detalhes:', error);
@@ -705,8 +926,15 @@
             const dados = {
                 codigo_pedido: document.getElementById('codigo_pedido').value,
                 aplicativo_delivery: document.getElementById('aplicativo_delivery').value,
-                bairro: document.getElementById('bairro').value
+                quantidade_pedidos: document.getElementById('quantidade_pedidos').value,
+                tipo_entrega: document.getElementById('tipo_entrega').value
             };
+            
+            // Adicionar valor_turbo apenas se tipo for Turbo
+            if (dados.tipo_entrega === 'Turbo') {
+                dados.valor_turbo = parseFloat(document.getElementById('valor_turbo').value);
+            }
+            
             try {
                 const response = await fetch(`${API_URL}/entregas`, {
                     method: 'POST',
@@ -749,6 +977,53 @@
             document.getElementById(modalId).classList.remove('show');
         }
 
+        function abrirModalCancelar(codigo) {
+            document.getElementById('cancelar-codigo').value = codigo;
+            document.getElementById('form-cancelar').reset();
+            document.getElementById('detalhes-modal').classList.remove('show');
+            document.getElementById('cancelar-modal').classList.add('show');
+        }
+
+        // Form de cancelamento
+        document.getElementById('form-cancelar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const codigo = document.getElementById('cancelar-codigo').value;
+            const motivo = document.getElementById('motivo-cancelamento').value;
+            const pedidoPago = document.getElementById('pedido-pago').checked;
+            const senhaAdmin = document.getElementById('senha-admin-cancelar').value;
+            
+            if (!confirm('Tem certeza que deseja cancelar esta entrega?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/entregas/${codigo}/cancelar`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        motivo: motivo,
+                        pedido_pago: pedidoPago,
+                        senha_admin: senhaAdmin
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Entrega cancelada com sucesso!');
+                    fecharModal('cancelar-modal');
+                    carregarEntregas(filtroAtual);
+                    carregarStats();
+                } else {
+                    alert('❌ Erro: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Erro ao cancelar entrega');
+                console.error(error);
+            }
+        });
+
         window.onclick = function(event) {
             if (event.target.classList.contains('modal')) {
                 event.target.classList.remove('show');
@@ -759,6 +1034,10 @@
             initMap();
             carregarStats();
             carregarEntregas();
+            
+            // Definir data atual no filtro
+            document.getElementById('filtro-data').value = obterDataAtual();
+            
             setInterval(() => {
                 carregarStats();
                 carregarEntregas(filtroAtual);

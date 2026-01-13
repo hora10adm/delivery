@@ -13,8 +13,9 @@ CORS(app)
 DATABASE = 'entregas.db'
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=10, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL')  # Write-Ahead Logging
     return conn
 
 def init_db():
@@ -25,6 +26,9 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 codigo_pedido TEXT UNIQUE NOT NULL,
                 aplicativo_delivery TEXT NOT NULL,
+                quantidade_pedidos TEXT,
+                tipo_entrega TEXT,
+                valor_turbo REAL,
                 motoboy_nome TEXT,
                 bairro TEXT,
                 status TEXT DEFAULT 'pendente',
@@ -97,9 +101,15 @@ def criar_entrega():
         db = get_db()
         
         cursor = db.execute('''
-            INSERT INTO entregas (codigo_pedido, aplicativo_delivery, bairro)
-            VALUES (?, ?, ?)
-        ''', (data['codigo_pedido'], data['aplicativo_delivery'], data.get('bairro', '')))
+            INSERT INTO entregas (codigo_pedido, aplicativo_delivery, quantidade_pedidos, tipo_entrega, valor_turbo)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            data['codigo_pedido'], 
+            data['aplicativo_delivery'],
+            data.get('quantidade_pedidos', ''),
+            data.get('tipo_entrega', ''),
+            data.get('valor_turbo', None)
+        ))
         
         db.commit()
         
@@ -190,7 +200,8 @@ def finalizar_entrega(codigo_pedido):
                 params={
                     'lat': data['latitude'],
                     'lon': data['longitude'],
-                    'format': 'json'
+                    'format': 'json',
+                    'zoom': 18  # Mais detalhado para pegar bairro
                 },
                 headers={'User-Agent': 'SistemaEntregas/1.0'}
             )
@@ -198,9 +209,39 @@ def finalizar_entrega(codigo_pedido):
                 result = response.json()
                 if 'display_name' in result:
                     endereco = result['display_name']
-                # Tentar extrair o bairro
+                
+                # Tentar extrair o bairro (ordem de prioridade)
                 address = result.get('address', {})
-                bairro = address.get('suburb') or address.get('neighbourhood') or address.get('quarter') or address.get('city_district') or ''
+                
+                # Lista de campos que representam bairro (do mais específico ao menos)
+                campos_bairro = [
+                    'suburb',           # Bairro/Subúrbio
+                    'neighbourhood',    # Vizinhança
+                    'quarter',          # Quarteirão
+                    'city_district',    # Distrito da cidade
+                    'district',         # Distrito
+                    'borough',          # Bairro (termo inglês)
+                    'allotments'        # Loteamento
+                ]
+                
+                # Pegar o primeiro campo que existir e NÃO seja uma cidade
+                cidade = address.get('city') or address.get('town') or address.get('village') or ''
+                
+                for campo in campos_bairro:
+                    if campo in address and address[campo]:
+                        possivel_bairro = address[campo].strip()
+                        # Verificar se não é o nome da cidade
+                        if possivel_bairro and possivel_bairro != cidade:
+                            bairro = possivel_bairro
+                            break
+                
+                # Se ainda não achou, tenta municipality ou hamlet (mas só se for diferente da cidade)
+                if not bairro:
+                    if 'municipality' in address and address['municipality'] != cidade:
+                        bairro = address['municipality']
+                    elif 'hamlet' in address and address['hamlet'] != cidade:
+                        bairro = address['hamlet']
+                
         except:
             pass  # Se falhar, usa apenas lat/long
         
@@ -550,4 +591,5 @@ def deletar_motoboy_api(id):
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)

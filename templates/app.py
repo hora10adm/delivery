@@ -13,8 +13,9 @@ CORS(app)
 DATABASE = 'entregas.db'
 
 def get_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=10, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL')  # Write-Ahead Logging
     return conn
 
 def init_db():
@@ -25,12 +26,18 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 codigo_pedido TEXT UNIQUE NOT NULL,
                 aplicativo_delivery TEXT NOT NULL,
+                quantidade_pedidos TEXT,
+                tipo_entrega TEXT,
+                valor_turbo REAL,
                 motoboy_nome TEXT,
                 bairro TEXT,
                 status TEXT DEFAULT 'pendente',
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 data_inicio TIMESTAMP,
                 data_finalizacao TIMESTAMP,
+                data_cancelamento TIMESTAMP,
+                motivo_cancelamento TEXT,
+                pedido_pago INTEGER DEFAULT 0,
                 latitude REAL,
                 longitude REAL,
                 endereco_entrega TEXT
@@ -68,7 +75,7 @@ def init_db():
         # Criar usuário admin padrão se não existir
         admin_exists = db.execute('SELECT * FROM usuarios WHERE username = ?', ('admin',)).fetchone()
         if not admin_exists:
-            import hashlib
+    
             senha_hash = hashlib.sha256('admin123'.encode()).hexdigest()
             db.execute('INSERT INTO usuarios (username, password, nome) VALUES (?, ?, ?)', 
                       ('admin', senha_hash, 'Administrador'))
@@ -97,9 +104,15 @@ def criar_entrega():
         db = get_db()
         
         cursor = db.execute('''
-            INSERT INTO entregas (codigo_pedido, aplicativo_delivery, bairro)
-            VALUES (?, ?, ?)
-        ''', (data['codigo_pedido'], data['aplicativo_delivery'], data.get('bairro', '')))
+            INSERT INTO entregas (codigo_pedido, aplicativo_delivery, quantidade_pedidos, tipo_entrega, valor_turbo)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            data['codigo_pedido'], 
+            data['aplicativo_delivery'],
+            data.get('quantidade_pedidos', ''),
+            data.get('tipo_entrega', ''),
+            data.get('valor_turbo', None)
+        ))
         
         db.commit()
         
@@ -190,7 +203,8 @@ def finalizar_entrega(codigo_pedido):
                 params={
                     'lat': data['latitude'],
                     'lon': data['longitude'],
-                    'format': 'json'
+                    'format': 'json',
+                    'zoom': 18  # Mais detalhado para pegar bairro
                 },
                 headers={'User-Agent': 'SistemaEntregas/1.0'}
             )
@@ -198,9 +212,39 @@ def finalizar_entrega(codigo_pedido):
                 result = response.json()
                 if 'display_name' in result:
                     endereco = result['display_name']
-                # Tentar extrair o bairro
+                
+                # Tentar extrair o bairro (ordem de prioridade)
                 address = result.get('address', {})
-                bairro = address.get('suburb') or address.get('neighbourhood') or address.get('quarter') or address.get('city_district') or ''
+                
+                # Lista de campos que representam bairro (do mais específico ao menos)
+                campos_bairro = [
+                    'suburb',           # Bairro/Subúrbio
+                    'neighbourhood',    # Vizinhança
+                    'quarter',          # Quarteirão
+                    'city_district',    # Distrito da cidade
+                    'district',         # Distrito
+                    'borough',          # Bairro (termo inglês)
+                    'allotments'        # Loteamento
+                ]
+                
+                # Pegar o primeiro campo que existir e NÃO seja uma cidade
+                cidade = address.get('city') or address.get('town') or address.get('village') or ''
+                
+                for campo in campos_bairro:
+                    if campo in address and address[campo]:
+                        possivel_bairro = address[campo].strip()
+                        # Verificar se não é o nome da cidade
+                        if possivel_bairro and possivel_bairro != cidade:
+                            bairro = possivel_bairro
+                            break
+                
+                # Se ainda não achou, tenta municipality ou hamlet (mas só se for diferente da cidade)
+                if not bairro:
+                    if 'municipality' in address and address['municipality'] != cidade:
+                        bairro = address['municipality']
+                    elif 'hamlet' in address and address['hamlet'] != cidade:
+                        bairro = address['hamlet']
+                
         except:
             pass  # Se falhar, usa apenas lat/long
         
@@ -281,7 +325,7 @@ def api_login():
         data = request.json
         db = get_db()
         
-        import hashlib
+
         senha_hash = hashlib.sha256(data['password'].encode()).hexdigest()
         
         usuario = db.execute(
@@ -303,7 +347,7 @@ def api_motoboy_login():
         data = request.json
         db = get_db()
         
-        import hashlib
+
         senha_hash = hashlib.sha256(data['password'].encode()).hexdigest()
         
         motoboy = db.execute(
@@ -430,6 +474,36 @@ def ranking_bairros():
     resultados = db.execute(query, params).fetchall()
     return jsonify([dict(r) for r in resultados])
 
+# API - Cancelar entrega
+@app.route('/api/entregas/<codigo_pedido>/cancelar', methods=['PUT'])
+def cancelar_entrega(codigo_pedido):
+    try:
+        data = request.json
+        db = get_db()
+        
+        # Verificar senha admin
+        senha_hash = hashlib.sha256(data['senha_admin'].encode()).hexdigest()
+        admin = db.execute('SELECT * FROM usuarios WHERE password = ?', (senha_hash,)).fetchone()
+        
+        if not admin:
+            return jsonify({'success': False, 'message': 'Senha administrativa incorreta'}), 401
+        
+        # Cancelar entrega
+        db.execute('''
+            UPDATE entregas 
+            SET status = 'cancelada',
+                motivo_cancelamento = ?,
+                pedido_pago = ?,
+                data_cancelamento = ?
+            WHERE codigo_pedido = ?
+        ''', (data['motivo'], data.get('pedido_pago', False), datetime.now(), codigo_pedido))
+        
+        db.commit()
+        
+        return jsonify({'success': True, 'message': 'Entrega cancelada com sucesso'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # API - CRUD Motoboys
 @app.route('/api/admin/motoboys', methods=['GET'])
 def listar_motoboys_api():
@@ -452,7 +526,7 @@ def criar_motoboy_api():
             return jsonify({'success': False, 'message': 'Usuário já existe'}), 400
         
         # Criptografar senha
-        import hashlib
+
         senha_hash = hashlib.sha256(data['password'].encode()).hexdigest()
         
         cursor = db.execute('''
@@ -485,7 +559,7 @@ def atualizar_motoboy_api(id):
         
         # Atualizar senha se fornecida
         if 'password' in data and data['password']:
-            import hashlib
+    
             senha_hash = hashlib.sha256(data['password'].encode()).hexdigest()
             db.execute('''
                 UPDATE motoboys 
@@ -550,4 +624,5 @@ def deletar_motoboy_api(id):
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
