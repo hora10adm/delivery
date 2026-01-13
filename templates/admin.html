@@ -891,33 +891,21 @@
                         </a>
                     </div>
                     ` : ''}
+                    
+                    ${entrega.status !== 'cancelada' && entrega.status !== 'finalizada' ? `
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ecf0f1;">
+                        <button 
+                            onclick="abrirModalCancelar('${entrega.codigo_pedido}')"
+                            style="width: 100%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;"
+                        >
+                            🚫 Cancelar Entrega
+                        </button>
+                    </div>
+                    ` : ''}
                 `;
 
                 document.getElementById('detalhes-content').innerHTML = html;
                 document.getElementById('detalhes-modal').classList.add('show');
-                
-                // Adicionar botão cancelar se aplicável
-                setTimeout(() => {
-                    const modalContent = document.querySelector('#detalhes-modal .modal-content');
-                    const botaoFechar = modalContent.querySelector('.modal-close');
-                    
-                    // Remover botão cancelar anterior
-                    const botaoAntigo = document.getElementById('btn-cancelar-entrega');
-                    if (botaoAntigo) botaoAntigo.remove();
-                    
-                    // Adicionar novo botão se não estiver cancelada ou finalizada
-                    if (entrega.status !== 'cancelada' && entrega.status !== 'finalizada') {
-                        const btnCancelar = document.createElement('button');
-                        btnCancelar.id = 'btn-cancelar-entrega';
-                        btnCancelar.style.cssText = 'width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px;';
-                        btnCancelar.innerHTML = '🚫 Cancelar Entrega';
-                        btnCancelar.onclick = function() {
-                            document.getElementById('detalhes-modal').classList.remove('show');
-                            abrirModalCancelar(entrega.codigo_pedido);
-                        };
-                        modalContent.insertBefore(btnCancelar, botaoFechar);
-                    }
-                }, 100);
             } catch (error) {
                 console.error('Erro ao carregar detalhes:', error);
                 alert('Erro ao carregar detalhes da entrega');
@@ -981,9 +969,9 @@
         }
 
         function abrirModalCancelar(codigo) {
+            fecharModal('detalhes-modal');
             document.getElementById('cancelar-codigo').value = codigo;
             document.getElementById('form-cancelar').reset();
-            document.getElementById('detalhes-modal').classList.remove('show');
             document.getElementById('cancelar-modal').classList.add('show');
         }
 
