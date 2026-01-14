@@ -106,38 +106,45 @@ def init_db():
         
         db.commit()
 
-# Executar migração antes da primeira requisição
-@app.before_first_request
-def migrate_database():
-    try:
-        db = get_db()
-        cursor = db.execute("PRAGMA table_info(entregas)")
-        colunas_existentes = [row[1] for row in cursor.fetchall()]
-        
-        novas_colunas = [
-            ('quantidade_pedidos', 'TEXT'),
-            ('tipo_entrega', 'TEXT'),
-            ('valor_turbo', 'REAL'),
-            ('data_cancelamento', 'TIMESTAMP'),
-            ('motivo_cancelamento', 'TEXT'),
-            ('pedido_pago', 'INTEGER DEFAULT 0')
-        ]
-        
-        migrou = False
-        for nome_coluna, tipo_coluna in novas_colunas:
-            if nome_coluna not in colunas_existentes:
-                try:
-                    db.execute(f"ALTER TABLE entregas ADD COLUMN {nome_coluna} {tipo_coluna}")
-                    print(f"✅ AUTO-MIGRAÇÃO: '{nome_coluna}' adicionada")
-                    migrou = True
-                except:
-                    pass
-        
-        if migrou:
-            db.commit()
-            print("🎉 Migração automática concluída!")
-    except Exception as e:
-        print(f"⚠️ Erro na auto-migração: {e}")
+# Flag para controlar migração única
+_migration_done = False
+
+@app.before_request
+def run_migration_once():
+    global _migration_done
+    if not _migration_done:
+        try:
+            db = get_db()
+            cursor = db.execute("PRAGMA table_info(entregas)")
+            colunas_existentes = [row[1] for row in cursor.fetchall()]
+            
+            novas_colunas = [
+                ('quantidade_pedidos', 'TEXT'),
+                ('tipo_entrega', 'TEXT'),
+                ('valor_turbo', 'REAL'),
+                ('data_cancelamento', 'TIMESTAMP'),
+                ('motivo_cancelamento', 'TEXT'),
+                ('pedido_pago', 'INTEGER DEFAULT 0')
+            ]
+            
+            migrou = False
+            for nome_coluna, tipo_coluna in novas_colunas:
+                if nome_coluna not in colunas_existentes:
+                    try:
+                        db.execute(f"ALTER TABLE entregas ADD COLUMN {nome_coluna} {tipo_coluna}")
+                        print(f"✅ AUTO-MIGRAÇÃO: '{nome_coluna}' adicionada")
+                        migrou = True
+                    except:
+                        pass
+            
+            if migrou:
+                db.commit()
+                print("🎉 Migração automática concluída!")
+            
+            _migration_done = True
+        except Exception as e:
+            print(f"⚠️ Erro na auto-migração: {e}")
+            _migration_done = True
 
 # Rotas para o Painel Admin
 @app.route('/')
