@@ -475,6 +475,62 @@
             </div>
         </div>
 
+        <!-- Ranking de Motoboys -->
+        <div class="card">
+            <div class="card-header">
+                🏆 Ranking de Motoboys
+                <div style="float: right; display: flex; gap: 10px;">
+                    <input 
+                        type="date" 
+                        id="ranking-data-inicio" 
+                        style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;"
+                        onchange="carregarRanking()"
+                    >
+                    <input 
+                        type="date" 
+                        id="ranking-data-fim" 
+                        style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;"
+                        onchange="carregarRanking()"
+                    >
+                    <button 
+                        onclick="limparFiltrosRanking()"
+                        style="padding: 5px 15px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                    >
+                        🔄
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div style="overflow-x: auto;">
+                    <table id="ranking-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: #34495e; color: white;">
+                                <th style="padding: 12px; border: 1px solid #ddd;">#</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Motoboy</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">🚀 Turbo</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">👥 Duplas</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">📦 Simples</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">❌ Cancel. Pagas</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">✅ Total Final.</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #27ae60; font-weight: bold;">🏆 PONTOS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranking-body">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 20px;">Carregando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 10px; padding: 10px; background: #ecf0f1; border-radius: 4px; font-size: 12px;">
+                    <strong>📊 Regras de Pontuação:</strong><br>
+                    • Entrega Dupla = 2 pontos<br>
+                    • Entrega Simples = 1 ponto<br>
+                    • Entrega Cancelada (se paga ao motoboy) = 1 ponto
+                </div>
+            </div>
+        </div>
+
         <div>
             <div class="card" style="margin-bottom: 20px;">
                 <div class="card-header">🗺️ Mapa de Entregas</div>
@@ -1025,6 +1081,7 @@
             initMap();
             carregarStats();
             carregarEntregas();
+            carregarRanking();
             
             // Definir data atual no filtro
             document.getElementById('filtro-data').value = obterDataAtual();
@@ -1034,6 +1091,81 @@
                 carregarEntregas(filtroAtual);
             }, 30000);
         };
+
+        async function carregarRanking() {
+            try {
+                const dataInicio = document.getElementById('ranking-data-inicio').value;
+                const dataFim = document.getElementById('ranking-data-fim').value;
+                
+                let url = `${API_URL}/admin/ranking-motoboys`;
+                const params = [];
+                if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+                if (dataFim) params.push(`data_fim=${dataFim}`);
+                if (params.length > 0) url += '?' + params.join('&');
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('ranking-body');
+                tbody.innerHTML = '';
+                
+                if (data.motoboys.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Nenhum motoboy com entregas no período</td></tr>';
+                    return;
+                }
+                
+                // Adicionar motoboys
+                data.motoboys.forEach((motoboy, index) => {
+                    const tr = document.createElement('tr');
+                    tr.style.background = index % 2 === 0 ? '#fff' : '#f8f9fa';
+                    
+                    // Medalhas para top 3
+                    let posicao = (index + 1).toString();
+                    if (index === 0) posicao = '🥇';
+                    else if (index === 1) posicao = '🥈';
+                    else if (index === 2) posicao = '🥉';
+                    
+                    tr.innerHTML = `
+                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">${posicao}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">${motoboy.motoboy_nome}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_turbo}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_duplas}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_simples}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_canceladas_pagas}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.total_finalizadas}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #d4edda; font-weight: bold; font-size: 16px;">${motoboy.pontuacao_total}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Adicionar linha de totais
+                const trTotal = document.createElement('tr');
+                trTotal.style.background = '#34495e';
+                trTotal.style.color = 'white';
+                trTotal.style.fontWeight = 'bold';
+                trTotal.innerHTML = `
+                    <td style="padding: 12px; border: 1px solid #ddd;" colspan="2">${data.totais.motoboy_nome}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_turbo}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_duplas}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_simples}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_canceladas_pagas}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.total_finalizadas}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #27ae60; font-size: 18px;">${data.totais.pontuacao_total}</td>
+                `;
+                tbody.appendChild(trTotal);
+                
+            } catch (error) {
+                console.error('Erro ao carregar ranking:', error);
+                document.getElementById('ranking-body').innerHTML = 
+                    '<tr><td colspan="8" style="text-align: center; padding: 20px; color: red;">Erro ao carregar ranking</td></tr>';
+            }
+        }
+
+        function limparFiltrosRanking() {
+            document.getElementById('ranking-data-inicio').value = '';
+            document.getElementById('ranking-data-fim').value = '';
+            carregarRanking();
+        }
     </script>
 </body>
 </html>

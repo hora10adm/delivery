@@ -557,6 +557,90 @@ def ranking_bairros():
     resultados = db.execute(query, params).fetchall()
     return jsonify([dict(r) for r in resultados])
 
+# API - Ranking completo de motoboys
+@app.route('/api/admin/ranking-motoboys', methods=['GET'])
+def ranking_motoboys():
+    db = get_db()
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    
+    # Query complexa para calcular todas as métricas
+    query = '''
+        SELECT 
+            motoboy_nome,
+            
+            -- Entregas Turbo Finalizadas
+            SUM(CASE 
+                WHEN tipo_entrega = 'Turbo' AND status = 'finalizada' 
+                THEN 1 ELSE 0 
+            END) as entregas_turbo,
+            
+            -- Entregas Duplas Finalizadas
+            SUM(CASE 
+                WHEN quantidade_pedidos = 'Duplo' AND status = 'finalizada' 
+                THEN 1 ELSE 0 
+            END) as entregas_duplas,
+            
+            -- Entregas Simples Finalizadas
+            SUM(CASE 
+                WHEN quantidade_pedidos = 'Simples' AND status = 'finalizada' 
+                THEN 1 ELSE 0 
+            END) as entregas_simples,
+            
+            -- Entregas Canceladas mas Pagas
+            SUM(CASE 
+                WHEN status = 'cancelada' AND pedido_pago = 1 
+                THEN 1 ELSE 0 
+            END) as entregas_canceladas_pagas,
+            
+            -- Total de Entregas Finalizadas
+            SUM(CASE 
+                WHEN status = 'finalizada' 
+                THEN 1 ELSE 0 
+            END) as total_finalizadas,
+            
+            -- Pontuação Total (Duplas = 2, Simples = 1, Canceladas Pagas = 1)
+            SUM(CASE 
+                WHEN quantidade_pedidos = 'Duplo' AND status = 'finalizada' THEN 2
+                WHEN status = 'finalizada' THEN 1
+                WHEN status = 'cancelada' AND pedido_pago = 1 THEN 1
+                ELSE 0 
+            END) as pontuacao_total
+            
+        FROM entregas
+        WHERE motoboy_nome IS NOT NULL 
+        AND motoboy_nome != ''
+    '''
+    
+    params = []
+    if data_inicio:
+        query += ' AND date(data_criacao) >= ?'
+        params.append(data_inicio)
+    if data_fim:
+        query += ' AND date(data_criacao) <= ?'
+        params.append(data_fim)
+    
+    query += ' GROUP BY motoboy_nome ORDER BY pontuacao_total DESC'
+    
+    resultados = db.execute(query, params).fetchall()
+    motoboys = [dict(r) for r in resultados]
+    
+    # Calcular totais gerais
+    totais = {
+        'motoboy_nome': 'TOTAL GERAL',
+        'entregas_turbo': sum(m['entregas_turbo'] for m in motoboys),
+        'entregas_duplas': sum(m['entregas_duplas'] for m in motoboys),
+        'entregas_simples': sum(m['entregas_simples'] for m in motoboys),
+        'entregas_canceladas_pagas': sum(m['entregas_canceladas_pagas'] for m in motoboys),
+        'total_finalizadas': sum(m['total_finalizadas'] for m in motoboys),
+        'pontuacao_total': sum(m['pontuacao_total'] for m in motoboys)
+    }
+    
+    return jsonify({
+        'motoboys': motoboys,
+        'totais': totais
+    })
+
 # API - Cancelar entrega
 @app.route('/api/entregas/<codigo_pedido>/cancelar', methods=['PUT'])
 def cancelar_entrega(codigo_pedido):
