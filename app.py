@@ -103,16 +103,35 @@ def criar_entrega():
         data = request.json
         db = get_db()
         
+        # INSERT básico apenas com campos obrigatórios
         cursor = db.execute('''
-            INSERT INTO entregas (codigo_pedido, aplicativo_delivery, quantidade_pedidos, tipo_entrega, valor_turbo)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            data['codigo_pedido'], 
-            data['aplicativo_delivery'],
-            data.get('quantidade_pedidos', ''),
-            data.get('tipo_entrega', ''),
-            data.get('valor_turbo', None)
-        ))
+            INSERT INTO entregas (codigo_pedido, aplicativo_delivery)
+            VALUES (?, ?)
+        ''', (data['codigo_pedido'], data['aplicativo_delivery']))
+        
+        entrega_id = cursor.lastrowid
+        
+        # UPDATE com campos opcionais se existirem
+        updates = []
+        params = []
+        
+        if 'quantidade_pedidos' in data and data.get('quantidade_pedidos'):
+            updates.append('quantidade_pedidos = ?')
+            params.append(data['quantidade_pedidos'])
+        
+        if 'tipo_entrega' in data and data.get('tipo_entrega'):
+            updates.append('tipo_entrega = ?')
+            params.append(data['tipo_entrega'])
+        
+        if 'valor_turbo' in data and data.get('valor_turbo'):
+            updates.append('valor_turbo = ?')
+            params.append(float(data['valor_turbo']))
+        
+        # Executar UPDATE se houver campos opcionais
+        if updates:
+            params.append(entrega_id)
+            sql = f"UPDATE entregas SET {', '.join(updates)} WHERE id = ?"
+            db.execute(sql, params)
         
         db.commit()
         
@@ -133,7 +152,7 @@ def criar_entrega():
         
         return jsonify({
             'success': True,
-            'id': cursor.lastrowid,
+            'id': entrega_id,
             'codigo_pedido': data['codigo_pedido'],
             'qrcode': img_str,
             'message': 'Entrega criada com sucesso'
