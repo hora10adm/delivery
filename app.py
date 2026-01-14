@@ -44,6 +44,30 @@ def init_db():
             )
         ''')
         
+        # MIGRAÇÃO AUTOMÁTICA: Adicionar colunas se não existirem
+        try:
+            cursor = db.execute("PRAGMA table_info(entregas)")
+            colunas_existentes = [row[1] for row in cursor.fetchall()]
+            
+            novas_colunas = [
+                ('quantidade_pedidos', 'TEXT'),
+                ('tipo_entrega', 'TEXT'),
+                ('valor_turbo', 'REAL'),
+                ('data_cancelamento', 'TIMESTAMP'),
+                ('motivo_cancelamento', 'TEXT'),
+                ('pedido_pago', 'INTEGER DEFAULT 0')
+            ]
+            
+            for nome_coluna, tipo_coluna in novas_colunas:
+                if nome_coluna not in colunas_existentes:
+                    try:
+                        db.execute(f"ALTER TABLE entregas ADD COLUMN {nome_coluna} {tipo_coluna}")
+                        print(f"✅ Migração: Coluna '{nome_coluna}' adicionada")
+                    except Exception as e:
+                        print(f"⚠️ Aviso: '{nome_coluna}': {e}")
+        except Exception as e:
+            print(f"⚠️ Migração automática: {e}")
+        
         db.execute('''
             CREATE TABLE IF NOT EXISTS motoboys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
