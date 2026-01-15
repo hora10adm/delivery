@@ -274,6 +274,42 @@
     </div>
 
     <div class="container">
+        <!-- Ranking de Motoboys -->
+        <div class="card" style="margin-bottom: 30px;">
+            <h2>🏆 Ranking de Motoboys</h2>
+            <div style="overflow-x: auto;">
+                <table id="ranking-table" style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 20px;">
+                    <thead>
+                        <tr style="background: #8B008B; color: white;">
+                            <th style="padding: 12px; border: 1px solid #ddd;">#</th>
+                            <th style="padding: 12px; border: 1px solid #ddd;">Motoboy</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">🚀 Turbo</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">👥 Duplas</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">📦 Simples</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">❌ Cancel. Pagas</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">✅ Total Final.</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #27ae60; font-weight: bold;">🏆 PONTOS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-body">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 20px;">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; font-size: 13px; border-left: 4px solid #8B008B;">
+                <strong>📊 Regras de Pontuação:</strong><br>
+                • Entrega Dupla = 2 pontos | • Entrega Simples = 1 ponto | • Entrega Cancelada (se paga ao motoboy) = 1 ponto
+            </div>
+        </div>
+
+        <!-- Entregas Canceladas -->
+        <div class="card" style="margin-bottom: 30px;">
+            <h2>❌ Entregas Canceladas</h2>
+            <div id="cancelamentos-list" style="display: grid; gap: 15px; margin-top: 20px;"></div>
+        </div>
+
         <div class="cards-container">
             <!-- Card 1: Entregas por Entregador -->
             <div class="card">
@@ -438,6 +474,144 @@
             carregarEntregasPorEntregador();
             carregarRankingTempos();
             carregarRankingBairros();
+            carregarRanking();
+            carregarCancelamentos();
+        }
+
+        async function carregarRanking() {
+            try {
+                const dataInicio = document.getElementById('data-inicio').value;
+                const dataFim = document.getElementById('data-fim').value;
+                
+                let url = `${API_URL}/admin/ranking-motoboys`;
+                const params = [];
+                if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+                if (dataFim) params.push(`data_fim=${dataFim}`);
+                if (params.length > 0) url += '?' + params.join('&');
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('ranking-body');
+                tbody.innerHTML = '';
+                
+                if (data.motoboys.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #7f8c8d;">Nenhum motoboy com entregas no período</td></tr>';
+                    return;
+                }
+                
+                // Adicionar motoboys
+                data.motoboys.forEach((motoboy, index) => {
+                    const tr = document.createElement('tr');
+                    tr.style.background = index % 2 === 0 ? '#fff' : '#f8f9fa';
+                    
+                    // Medalhas para top 3
+                    let posicao = (index + 1).toString();
+                    if (index === 0) posicao = '🥇';
+                    else if (index === 1) posicao = '🥈';
+                    else if (index === 2) posicao = '🥉';
+                    
+                    tr.innerHTML = `
+                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">${posicao}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">${motoboy.motoboy_nome}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_turbo}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_duplas}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_simples}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.entregas_canceladas_pagas}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${motoboy.total_finalizadas}</td>
+                        <td style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #d4edda; font-weight: bold; font-size: 16px;">${motoboy.pontuacao_total}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Adicionar linha de totais
+                const trTotal = document.createElement('tr');
+                trTotal.style.background = '#8B008B';
+                trTotal.style.color = 'white';
+                trTotal.style.fontWeight = 'bold';
+                trTotal.innerHTML = `
+                    <td style="padding: 12px; border: 1px solid #ddd;" colspan="2">${data.totais.motoboy_nome}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_turbo}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_duplas}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_simples}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.entregas_canceladas_pagas}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${data.totais.total_finalizadas}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #27ae60; font-size: 18px;">${data.totais.pontuacao_total}</td>
+                `;
+                tbody.appendChild(trTotal);
+                
+            } catch (error) {
+                console.error('Erro ao carregar ranking:', error);
+            }
+        }
+
+        async function carregarCancelamentos() {
+            try {
+                const dataInicio = document.getElementById('data-inicio').value;
+                const dataFim = document.getElementById('data-fim').value;
+                
+                let url = `${API_URL}/admin/entregas-canceladas`;
+                const params = [];
+                if (dataInicio) params.push(`data_inicio=${dataInicio}`);
+                if (dataFim) params.push(`data_fim=${dataFim}`);
+                if (params.length > 0) url += '?' + params.join('&');
+                
+                const response = await fetch(url);
+                const canceladas = await response.json();
+                
+                const list = document.getElementById('cancelamentos-list');
+                list.innerHTML = '';
+                
+                if (canceladas.length === 0) {
+                    list.innerHTML = '<div style="text-align: center; padding: 30px; color: #7f8c8d;">Nenhuma entrega cancelada no período</div>';
+                    return;
+                }
+                
+                canceladas.forEach(entrega => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: #fff3f3; border: 2px solid #e74c3c; border-radius: 8px; padding: 15px;';
+                    
+                    const dataCancelamento = entrega.data_cancelamento ? 
+                        new Date(entrega.data_cancelamento).toLocaleString('pt-BR') : 'Não informado';
+                    
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <div>
+                                <strong style="font-size: 16px; color: #e74c3c;">🚫 Pedido ${entrega.codigo_pedido}</strong>
+                                <span style="margin-left: 10px; padding: 3px 8px; background: #e74c3c; color: white; border-radius: 4px; font-size: 12px;">
+                                    CANCELADA
+                                </span>
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 13px;">
+                                ${dataCancelamento}
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                            <div><strong>App:</strong> ${entrega.aplicativo_delivery}</div>
+                            ${entrega.quantidade_pedidos ? `<div><strong>Quantidade:</strong> ${entrega.quantidade_pedidos}</div>` : ''}
+                            ${entrega.tipo_entrega ? `<div><strong>Tipo:</strong> ${entrega.tipo_entrega}</div>` : ''}
+                            ${entrega.motoboy_nome ? `<div><strong>Motoboy:</strong> ${entrega.motoboy_nome}</div>` : ''}
+                            <div>
+                                <strong>Pago ao Motoboy:</strong> 
+                                <span style="color: ${entrega.pedido_pago ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
+                                    ${entrega.pedido_pago ? '✅ SIM' : '❌ NÃO'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #fff; padding: 10px; border-radius: 4px; border-left: 4px solid #e74c3c;">
+                            <strong>📝 Motivo:</strong><br>
+                            ${entrega.motivo_cancelamento || 'Não informado'}
+                        </div>
+                    `;
+                    
+                    list.appendChild(card);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar cancelamentos:', error);
+            }
         }
 
         // Carregar dados iniciais

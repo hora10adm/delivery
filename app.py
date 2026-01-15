@@ -671,6 +671,35 @@ def cancelar_entrega(codigo_pedido):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# API - Listar entregas canceladas
+@app.route('/api/admin/entregas-canceladas', methods=['GET'])
+def listar_canceladas():
+    db = get_db()
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    
+    query = '''
+        SELECT 
+            id, codigo_pedido, aplicativo_delivery, quantidade_pedidos,
+            tipo_entrega, valor_turbo, motoboy_nome, status,
+            data_criacao, data_cancelamento, motivo_cancelamento, pedido_pago
+        FROM entregas
+        WHERE status = 'cancelada'
+    '''
+    
+    params = []
+    if data_inicio:
+        query += ' AND date(data_cancelamento) >= ?'
+        params.append(data_inicio)
+    if data_fim:
+        query += ' AND date(data_cancelamento) <= ?'
+        params.append(data_fim)
+    
+    query += ' ORDER BY data_cancelamento DESC'
+    
+    resultados = db.execute(query, params).fetchall()
+    return jsonify([dict(r) for r in resultados])
+
 # API - CRUD Motoboys
 @app.route('/api/admin/motoboys', methods=['GET'])
 def listar_motoboys_api():
