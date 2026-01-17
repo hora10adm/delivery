@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Multi-Loja - Rede Hora 10</title>
+    <style>
+        :root {
+            --hora10-roxo-escuro: #4B0082;
+            --hora10-roxo-medio: #8B008B;
+            --hora10-pink: #E91E63;
+            --hora10-laranja: #FF8C00;
+            --hora10-vermelho-laranja: #FF4500;
+            --hora10-gradient: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #E91E63 50%, #FF4500 75%, #FF8C00 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--hora10-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            max-width: 450px;
+            width: 100%;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            background: var(--hora10-gradient);
+            padding: 2.5rem 2rem;
+            text-align: center;
+            color: white;
+        }
+
+        .login-header img {
+            height: 60px;
+            margin-bottom: 1rem;
+        }
+
+        .login-header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            font-size: 0.95rem;
+            opacity: 0.95;
+        }
+
+        .login-body {
+            padding: 2.5rem 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--hora10-pink);
+            box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 1rem;
+            background: var(--hora10-gradient);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(233, 30, 99, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .alert.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+            display: block;
+        }
+
+        .alert.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+            display: block;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 1.2rem;
+            border-radius: 10px;
+            margin-top: 1.5rem;
+            border-left: 4px solid var(--hora10-pink);
+        }
+
+        .info-box h3 {
+            color: var(--hora10-roxo-escuro);
+            font-size: 0.9rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .info-box p {
+            color: #636e72;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box strong {
+            color: var(--hora10-pink);
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e1e8ed;
+        }
+
+        .footer-links a {
+            color: var(--hora10-roxo-medio);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--hora10-pink);
+        }
+
+        @media (max-width: 500px) {
+            .login-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .login-body {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="/static/img/logo-hora10.png" alt="Rede Hora 10">
+            <h1>Sistema Multi-Loja</h1>
+            <p>Acesso Gerencial por Loja</p>
+        </div>
+
+        <div class="login-body">
+            <div id="alert-box" class="alert"></div>
+
+            <form id="form-login" onsubmit="fazerLogin(event)">
+                <div class="form-group">
+                    <label for="loja">Selecione sua Loja</label>
+                    <select id="loja" required>
+                        <option value="">-- Escolha a loja --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha da Loja</label>
+                    <input 
+                        type="password" 
+                        id="senha" 
+                        placeholder="Digite a senha da loja"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn-login">
+                    Acessar Painel da Loja
+                </button>
+            </form>
+
+            <div class="info-box">
+                <h3>🔐 Informações de Acesso</h3>
+                <p><strong>Loja Centro:</strong> centro / centro123</p>
+                <p><strong>Loja Shopping:</strong> shopping / shopping123</p>
+                <p><strong>Loja Bairro Norte:</strong> norte / norte123</p>
+            </div>
+
+            <div class="footer-links">
+                <a href="/motoboy/login">Acesso Motoboy</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+
+        // Carregar lojas ao iniciar
+        window.onload = async () => {
+            await carregarLojas();
+        };
+
+        async function carregarLojas() {
+            try {
+                const response = await fetch(`${API_URL}/lojas`);
+                const lojas = await response.json();
+                
+                const select = document.getElementById('loja');
+                select.innerHTML = '<option value="">-- Escolha a loja --</option>';
+                
+                lojas.forEach(loja => {
+                    const option = document.createElement('option');
+                    option.value = loja.identificador;
+                    option.textContent = loja.nome;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                mostrarAlerta('Erro ao carregar lojas', 'error');
+            }
+        }
+
+        async function fazerLogin(event) {
+            event.preventDefault();
+            
+            const identificador = document.getElementById('loja').value;
+            const senha = document.getElementById('senha').value;
+            
+            if (!identificador || !senha) {
+                mostrarAlerta('Preencha todos os campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/loja/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ identificador, senha })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarAlerta('Login realizado! Redirecionando...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/loja/painel';
+                    }, 1000);
+                } else {
+                    mostrarAlerta(result.message || 'Usuário ou senha incorretos', 'error');
+                }
+            } catch (error) {
+                mostrarAlerta('Erro ao fazer login. Tente novamente.', 'error');
+            }
+        }
+
+        function mostrarAlerta(mensagem, tipo) {
+            const alertBox = document.getElementById('alert-box');
+            alertBox.textContent = mensagem;
+            alertBox.className = `alert ${tipo}`;
+            
+            if (tipo === 'error') {
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

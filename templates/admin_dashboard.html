@@ -6,6 +6,120 @@
     <title>Dashboard - Rede Hora 10</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            /* Cores Oficiais Rede Hora 10 */
+            --hora10-roxo-escuro: #4B0082;
+            --hora10-roxo-medio: #8B008B;
+            --hora10-pink: #E91E63;
+            --hora10-laranja: #FF8C00;
+            --hora10-laranja-vibrante: #FFA500;
+            --hora10-vermelho-laranja: #FF4500;
+            
+            /* Gradiente Oficial */
+            --hora10-gradient: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #E91E63 50%, #FF4500 75%, #FF8C00 100%);
+            
+            /* Sistema de Cores */
+            --primary-color: #4B0082;
+            --secondary-color: #8B008B;
+            --accent-color: #E91E63;
+            --success-color: #00b894;
+            --warning-color: #FFA500;
+            --danger-color: #FF4500;
+            --info-color: #8B008B;
+            
+            /* Neutros */
+            --light-bg: #f8f9fa;
+            --border-color: #e1e8ed;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            
+            /* Sombras Profissionais */
+            --shadow-sm: 0 2px 4px rgba(75, 0, 130, 0.08);
+            --shadow-md: 0 4px 12px rgba(75, 0, 130, 0.12);
+            --shadow-lg: 0 10px 30px rgba(75, 0, 130, 0.20);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #E91E63 50%, #FF4500 75%, #FF8C00 100%);
+            color: white;
+            padding: 0;
+            box-shadow: 0 10px 30px rgba(75, 0, 130, 0.20);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-brand .logo {
+            height: 50px;
+            width: auto;
+        }
+
+        .header-brand h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin: 0;
+            color: white;
+        }
+
+        .header-brand .subtitle {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 400;
+            margin: 0;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0 2rem 1rem 2rem;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn.active {
+            background: white;
+            color: #4B0082;
+            border-color: white;
+            font-weight: 600;
+        }
+
+
         * {
             margin: 0;
             padding: 0;
@@ -17,15 +131,7 @@
             background: #f5f5f5;
         }
 
-        .header {
-            background: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #FF1493 50%, #FF4500 75%, #FF8C00 100%);
-            color: white;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        
 
         .header-left {
             display: flex;
@@ -56,7 +162,7 @@
             background: rgba(255,255,255,0.2);
             border: 1px solid white;
             color: white;
-            border-radius: 4px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 12px;
         }
@@ -69,7 +175,7 @@
             background: white;
             padding: 20px;
             margin: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
@@ -99,16 +205,16 @@
             width: 100%;
             padding: 10px;
             border: 2px solid #ddd;
-            border-radius: 4px;
+            border-radius: 12px;
             font-size: 14px;
         }
 
         .btn-filtrar {
             padding: 10px 30px;
-            background: linear-gradient(135deg, #FF1493 0%, #FF4500 100%);
+            background: var(--hora10-gradient);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: bold;
             font-size: 14px;
@@ -155,7 +261,7 @@
             padding: 12px;
             margin-bottom: 10px;
             background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: 12px;
             border-left: 4px solid;
         }
 
@@ -216,10 +322,10 @@
         }
 
         .stat-box {
-            background: linear-gradient(135deg, #FF1493 0%, #FF4500 100%);
+            background: var(--hora10-gradient);
             color: white;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             text-align: center;
         }
 
@@ -247,19 +353,24 @@
 </head>
 <body>
     <div class="header">
-        <div class="header-left">
-            <img src="/static/img/logo.png" alt="Rede Hora 10" class="logo">
-            <h1>Dashboard Administrativo</h1>
+        <div class="header-top">
+            <div class="header-brand">
+                <img src="/static/img/logo-hora10.png" alt="Rede Hora 10" class="logo">
+                <div>
+                    <h1>Dashboard Administrativo</h1>
+                    <p class="subtitle">Análises e Estatísticas</p>
+                </div>
+            </div>
         </div>
-        <div class="nav-buttons">
-            <a href="/">📦 Entregas</a>
-            <a href="/admin/motoboys">🏍️ Motoboys</a>
-            <button class="logout-btn" onclick="logout()">Sair</button>
-        </div>
+        <nav class="nav-menu">
+            <a href="/" class="nav-btn">Entregas</a>
+            <a href="/admin/motoboys" class="nav-btn">Motoboys</a>
+            <a href="/admin/dashboard" class="nav-btn active">Dashboard</a>
+        </nav>
     </div>
 
     <div class="filters">
-        <h3>📅 Filtrar por Período</h3>
+        <h3>Filtrar por Período</h3>
         <div class="filters-row">
             <div class="filter-group">
                 <label>Data Início</label>
@@ -276,19 +387,19 @@
     <div class="container">
         <!-- Ranking de Motoboys -->
         <div class="card" style="margin-bottom: 30px;">
-            <h2>🏆 Ranking de Motoboys</h2>
+            <h2>Ranking de Motoboys</h2>
             <div style="overflow-x: auto;">
                 <table id="ranking-table" style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 20px;">
                     <thead>
                         <tr style="background: #8B008B; color: white;">
                             <th style="padding: 12px; border: 1px solid #ddd;">#</th>
                             <th style="padding: 12px; border: 1px solid #ddd;">Motoboy</th>
-                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">🚀 Turbo</th>
-                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">👥 Duplas</th>
-                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">📦 Simples</th>
-                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">❌ Cancel. Pagas</th>
-                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">✅ Total Final.</th>
-                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #27ae60; font-weight: bold;">🏆 PONTOS</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Turbo</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Duplas</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Simples</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Cancel. Pagas</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Total Final.</th>
+                            <th style="padding: 12px; border: 1px solid #ddd; text-align: center; background: #27ae60; font-weight: bold;">PONTOS</th>
                         </tr>
                     </thead>
                     <tbody id="ranking-body">
@@ -298,34 +409,34 @@
                     </tbody>
                 </table>
             </div>
-            <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; font-size: 13px; border-left: 4px solid #8B008B;">
-                <strong>📊 Regras de Pontuação:</strong><br>
+            <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 10px; font-size: 13px; border-left: 4px solid #8B008B;">
+                <strong>Regras de Pontuação:</strong><br>
                 • Entrega Dupla = 2 pontos | • Entrega Simples = 1 ponto | • Entrega Cancelada (se paga ao motoboy) = 1 ponto
             </div>
         </div>
 
         <!-- Entregas Canceladas -->
         <div class="card" style="margin-bottom: 30px;">
-            <h2>❌ Entregas Canceladas</h2>
+            <h2>Entregas Canceladas</h2>
             <div id="cancelamentos-list" style="display: grid; gap: 15px; margin-top: 20px;"></div>
         </div>
 
         <div class="cards-container">
             <!-- Card 1: Entregas por Entregador -->
             <div class="card">
-                <h2>📊 Entregas por Entregador</h2>
+                <h2>Entregas por Entregador</h2>
                 <div id="entregas-entregador-content"></div>
             </div>
 
             <!-- Card 2: Ranking de Melhores Tempos -->
             <div class="card">
-                <h2>🏆 Ranking - Melhores Tempos</h2>
+                <h2>Ranking - Melhores Tempos</h2>
                 <div id="ranking-tempos-content"></div>
             </div>
 
             <!-- Card 3: Ranking de Bairros -->
             <div class="card">
-                <h2>📍 Ranking - Bairros com Mais Pedidos</h2>
+                <h2>Ranking - Bairros com Mais Pedidos</h2>
                 <div id="ranking-bairros-content"></div>
             </div>
         </div>
@@ -378,7 +489,7 @@
                 const container = document.getElementById('entregas-entregador-content');
 
                 if (dados.length === 0) {
-                    container.innerHTML = '<div class="empty-state">📦 Nenhuma entrega finalizada no período</div>';
+                    container.innerHTML = '<div class="empty-state">Nenhuma entrega finalizada no período</div>';
                     return;
                 }
 
@@ -387,7 +498,7 @@
                     html += `
                         <div class="ranking-item">
                             <div class="ranking-position">${index + 1}º</div>
-                            <div class="ranking-name">🏍️ ${item.motoboy_nome || 'Sem nome'}</div>
+                            <div class="ranking-name">${item.motoboy_nome || 'Sem nome'}</div>
                             <div>
                                 <div class="ranking-value">${item.total_entregas} entregas</div>
                                 <div class="ranking-time">Tempo médio: ${formatarTempo(item.tempo_medio_minutos)}</div>
@@ -413,13 +524,13 @@
                 const container = document.getElementById('ranking-tempos-content');
 
                 if (dados.length === 0) {
-                    container.innerHTML = '<div class="empty-state">🏆 Sem dados suficientes (mínimo 3 entregas por motoboy)</div>';
+                    container.innerHTML = '<div class="empty-state">Sem dados suficientes (mínimo 3 entregas por motoboy)</div>';
                     return;
                 }
 
                 let html = '';
                 dados.forEach((item, index) => {
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    const medal = index === 0 ? '' : index === 1 ? '' : index === 2 ? '' : '';
                     html += `
                         <div class="ranking-item">
                             <div class="ranking-position">${medal || (index + 1) + 'º'}</div>
@@ -449,7 +560,7 @@
                 const container = document.getElementById('ranking-bairros-content');
 
                 if (dados.length === 0) {
-                    container.innerHTML = '<div class="empty-state">📍 Nenhum bairro registrado no período</div>';
+                    container.innerHTML = '<div class="empty-state">Nenhum bairro registrado no período</div>';
                     return;
                 }
 
@@ -458,7 +569,7 @@
                     html += `
                         <div class="ranking-item">
                             <div class="ranking-position">${index + 1}º</div>
-                            <div class="ranking-name">📍 ${item.bairro}</div>
+                            <div class="ranking-name">${item.bairro}</div>
                             <div class="ranking-value">${item.total_entregas} ${item.total_entregas === 1 ? 'pedido' : 'pedidos'}</div>
                         </div>
                     `;
@@ -507,9 +618,9 @@
                     
                     // Medalhas para top 3
                     let posicao = (index + 1).toString();
-                    if (index === 0) posicao = '🥇';
-                    else if (index === 1) posicao = '🥈';
-                    else if (index === 2) posicao = '🥉';
+                    if (index === 0) posicao = '';
+                    else if (index === 1) posicao = '';
+                    else if (index === 2) posicao = '';
                     
                     tr.innerHTML = `
                         <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold;">${posicao}</td>
@@ -569,7 +680,7 @@
                 
                 canceladas.forEach(entrega => {
                     const card = document.createElement('div');
-                    card.style.cssText = 'background: #fff3f3; border: 2px solid #e74c3c; border-radius: 8px; padding: 15px;';
+                    card.style.cssText = 'background: #fff3f3; border: 2px solid #e74c3c; border-radius: 12px; padding: 15px;';
                     
                     const dataCancelamento = entrega.data_cancelamento ? 
                         new Date(entrega.data_cancelamento).toLocaleString('pt-BR') : 'Não informado';
@@ -577,8 +688,8 @@
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <div>
-                                <strong style="font-size: 16px; color: #e74c3c;">🚫 Pedido ${entrega.codigo_pedido}</strong>
-                                <span style="margin-left: 10px; padding: 3px 8px; background: #e74c3c; color: white; border-radius: 4px; font-size: 12px;">
+                                <strong style="font-size: 16px; color: #e74c3c;">Pedido ${entrega.codigo_pedido}</strong>
+                                <span style="margin-left: 10px; padding: 3px 8px; background: #e74c3c; color: white; border-radius: 12px; font-size: 12px;">
                                     CANCELADA
                                 </span>
                             </div>
@@ -595,13 +706,13 @@
                             <div>
                                 <strong>Pago ao Motoboy:</strong> 
                                 <span style="color: ${entrega.pedido_pago ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
-                                    ${entrega.pedido_pago ? '✅ SIM' : '❌ NÃO'}
+                                    ${entrega.pedido_pago ? 'SIM' : 'NÃO'}
                                 </span>
                             </div>
                         </div>
                         
-                        <div style="background: #fff; padding: 10px; border-radius: 4px; border-left: 4px solid #e74c3c;">
-                            <strong>📝 Motivo:</strong><br>
+                        <div style="background: #fff; padding: 10px; border-radius: 12px; border-left: 4px solid #e74c3c;">
+                            <strong>Motivo:</strong><br>
                             ${entrega.motivo_cancelamento || 'Não informado'}
                         </div>
                     `;

@@ -5,6 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Rede Hora 10</title>
     <style>
+        :root {
+            /* Cores Oficiais Rede Hora 10 */
+            --hora10-roxo-escuro: #4B0082;
+            --hora10-roxo-medio: #8B008B;
+            --hora10-pink: #E91E63;
+            --hora10-laranja: #FF8C00;
+            --hora10-laranja-vibrante: #FFA500;
+            --hora10-vermelho-laranja: #FF4500;
+            
+            /* Gradiente Oficial */
+            --hora10-gradient: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #E91E63 50%, #FF4500 75%, #FF8C00 100%);
+            
+            /* Sistema de Cores */
+            --primary-color: #4B0082;
+            --secondary-color: #8B008B;
+            --accent-color: #E91E63;
+            --success-color: #00b894;
+            --warning-color: #FFA500;
+            --danger-color: #FF4500;
+            --info-color: #8B008B;
+            
+            /* Neutros */
+            --light-bg: #f8f9fa;
+            --border-color: #e1e8ed;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            
+            /* Sombras Profissionais */
+            --shadow-sm: 0 2px 4px rgba(75, 0, 130, 0.08);
+            --shadow-md: 0 4px 12px rgba(75, 0, 130, 0.12);
+            --shadow-lg: 0 10px 30px rgba(75, 0, 130, 0.20);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,7 +46,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #FF1493 50%, #FF4500 75%, #FF8C00 100%);
+            background: var(--hora10-gradient);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -57,7 +90,7 @@
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             transition: all 0.3s;
         }
@@ -71,10 +104,10 @@
         .btn-login {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, #FF1493 0%, #FF4500 100%);
+            background: var(--hora10-gradient);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
@@ -89,7 +122,7 @@
 
         .alert {
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 20px;
             display: none;
         }
@@ -112,7 +145,7 @@
             font-size: 12px;
             padding: 15px;
             background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: 12px;
         }
 
         .info-text strong {
@@ -122,7 +155,7 @@
 </head>
 <body>
     <div class="login-container">
-        <img src="/static/img/logo.png" alt="Rede Hora 10" class="logo">
+        <img src="/static/img/logo-hora10.png" alt="Rede Hora 10" class="logo">
         <h2>Área Administrativa</h2>
         
         <div id="alert" class="alert"></div>

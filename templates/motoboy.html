@@ -6,6 +6,39 @@
     <title>Entregas - Motoboy</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
+        :root {
+            /* Cores Oficiais Rede Hora 10 */
+            --hora10-roxo-escuro: #4B0082;
+            --hora10-roxo-medio: #8B008B;
+            --hora10-pink: #E91E63;
+            --hora10-laranja: #FF8C00;
+            --hora10-laranja-vibrante: #FFA500;
+            --hora10-vermelho-laranja: #FF4500;
+            
+            /* Gradiente Oficial */
+            --hora10-gradient: linear-gradient(135deg, #4B0082 0%, #8B008B 25%, #E91E63 50%, #FF4500 75%, #FF8C00 100%);
+            
+            /* Sistema de Cores */
+            --primary-color: #4B0082;
+            --secondary-color: #8B008B;
+            --accent-color: #E91E63;
+            --success-color: #00b894;
+            --warning-color: #FFA500;
+            --danger-color: #FF4500;
+            --info-color: #8B008B;
+            
+            /* Neutros */
+            --light-bg: #f8f9fa;
+            --border-color: #e1e8ed;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            
+            /* Sombras Profissionais */
+            --shadow-sm: 0 2px 4px rgba(75, 0, 130, 0.08);
+            --shadow-md: 0 4px 12px rgba(75, 0, 130, 0.12);
+            --shadow-lg: 0 10px 30px rgba(75, 0, 130, 0.20);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -19,7 +52,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--hora10-gradient);
             color: white;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -66,7 +99,7 @@
 
         #qr-reader {
             border: 2px dashed #ddd;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
         }
 
@@ -74,7 +107,7 @@
             width: 100%;
             padding: 15px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
@@ -83,7 +116,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--hora10-gradient);
             color: white;
         }
 
@@ -116,7 +149,7 @@
         .entrega-info {
             background: #f8f9fa;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 15px;
         }
 
@@ -164,7 +197,7 @@
 
         .alert {
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin-bottom: 15px;
         }
 
@@ -217,7 +250,7 @@
             margin-top: 10px;
             padding: 10px;
             background: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 12px;
         }
 
         .input-group {
@@ -235,7 +268,7 @@
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
         }
 
@@ -255,7 +288,7 @@
             flex: 1;
             padding: 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: bold;
             cursor: pointer;
         }
@@ -265,10 +298,10 @@
     <div class="header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h1>🏍️ Minhas Entregas</h1>
+                <h1>Minhas Entregas</h1>
                 <div class="motoboy-name" id="motoboy-header">Olá, Motoboy!</div>
             </div>
-            <button onclick="logout()" style="padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid white; color: white; border-radius: 4px; cursor: pointer; font-size: 14px;">Sair</button>
+            <button onclick="logout()" style="padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid white; color: white; border-radius: 12px; cursor: pointer; font-size: 14px;">Sair</button>
         </div>
     </div>
 
@@ -287,7 +320,7 @@
 
         <!-- Seção de Detalhes da Entrega -->
         <div class="card hidden" id="section-entrega">
-            <div class="card-header">📦 Detalhes da Entrega</div>
+            <div class="card-header">Detalhes da Entrega</div>
             <div class="card-body">
                 <div id="entrega-detalhes">
                     <!-- Será preenchido dinamicamente -->
@@ -389,16 +422,16 @@
             
             entregas.forEach(e => {
                 html += `
-                    <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #FF1493; cursor: pointer;" onclick="selecionarEntrega('${e.codigo_pedido}')">
+                    <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 12px; border-left: 4px solid #FF1493; cursor: pointer;" onclick="selecionarEntrega('${e.codigo_pedido}')">
                         <div style="font-weight: bold; font-size: 18px; color: #2c3e50;">${e.codigo_pedido}</div>
-                        <div style="color: #7f8c8d; font-size: 14px;">📦 ${e.aplicativo_delivery}</div>
+                        <div style="color: #7f8c8d; font-size: 14px;">${e.aplicativo_delivery}</div>
                         <div style="color: #FF4500; font-size: 12px; margin-top: 5px;">Iniciada: ${new Date(e.data_inicio).toLocaleString('pt-BR')}</div>
                     </div>
                 `;
             });
             
             html += `
-                <button style="width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;" onclick="fecharModalPendentes()">
+                <button style="width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 12px; font-weight: bold; margin-top: 10px; cursor: pointer;" onclick="fecharModalPendentes()">
                     Nova Entrega (Scanner)
                 </button>
             `;
@@ -520,7 +553,7 @@
                 <div class="entrega-info">
                     <div class="codigo">${entrega.codigo_pedido}</div>
                     <div class="label">Aplicativo</div>
-                    <div class="value">📦 ${entrega.aplicativo_delivery}</div>
+                    <div class="value">${entrega.aplicativo_delivery}</div>
                 </div>
                 
                 <div class="entrega-info">
@@ -531,7 +564,7 @@
                 ${entrega.motoboy_nome ? `
                 <div class="entrega-info">
                     <div class="label">Motoboy</div>
-                    <div class="value">🏍️ ${entrega.motoboy_nome}</div>
+                    <div class="value">${entrega.motoboy_nome}</div>
                 </div>
                 ` : ''}
             `;
@@ -545,7 +578,7 @@
                 `;
             } else if (entrega.status === 'em_rota') {
                 botoes = `
-                    <button class="btn btn-success" onclick="finalizarEntrega()">✓ Finalizar Entrega</button>
+                    <button class="btn btn-success" onclick="finalizarEntrega()">Finalizar Entrega</button>
                     <button class="btn btn-secondary" onclick="voltarScanner()">Voltar</button>
                 `;
             } else {
@@ -623,7 +656,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    mostrarMensagem('✓ Entrega finalizada com sucesso!', 'success');
+                    mostrarMensagem('Entrega finalizada com sucesso!', 'success');
                     setTimeout(() => {
                         voltarScanner();
                     }, 2000);

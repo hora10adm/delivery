@@ -1,13 +1,33 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 from datetime import datetime
+import pytz
 import sqlite3
 import hashlib
 import os
 import requests
+import secrets
 
 app = Flask(__name__)
+app.secret_key = secrets.token_hex(32)  # Chave secreta para sessões
 CORS(app)
+
+# Configuração de timezone para horário de Brasília
+TIMEZONE_BR = pytz.timezone('America/Sao_Paulo')
+
+def get_datetime_br():
+    """Retorna datetime atual no horário de Brasília"""
+    return datetime.now(TIMEZONE_BR)
+
+def format_datetime_br(dt_string):
+    """Formata datetime do banco para horário de Brasília"""
+    if not dt_string:
+        return None
+    try:
+        dt = datetime.fromisoformat(dt_string.replace('Z', '+00:00'))
+        return dt.astimezone(TIMEZONE_BR)
+    except:
+        return dt_string
 
 # Configuração do banco de dados
 DATABASE = 'entregas.db'
@@ -146,6 +166,87 @@ def run_migration_once():
             print(f"⚠️ Erro na auto-migração: {e}")
             _migration_done = True
 
+# ==================== SISTEMA MULTI-LOJA ====================
+
+# Rota de login multi-loja
+@app.route('/loja/login')
+def loja_login():
+    return render_template('loja_login.html')
+
+# API: Listar lojas disponíveis
+@app.route('/api/lojas', methods=['GET'])
+def get_lojas():
+    try:
+        db = get_db()
+        lojas = db.execute('''
+            SELECT id, nome, identificador 
+            FROM lojas 
+            WHERE ativo = 1 
+            ORDER BY nome
+        ''').fetchall()
+        
+        return jsonify([dict(loja) for loja in lojas])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# API: Login de loja
+@app.route('/api/loja/login', methods=['POST'])
+def loja_login_api():
+    try:
+        data = request.json
+        identificador = data.get('identificador')
+        senha = data.get('senha')
+        
+        if not identificador or not senha:
+            return jsonify({'success': False, 'message': 'Preencha todos os campos'})
+        
+        senha_hash = hashlib.sha256(senha.encode()).hexdigest()
+        
+        db = get_db()
+        loja = db.execute('''
+            SELECT id, nome, identificador 
+            FROM lojas 
+            WHERE identificador = ? AND senha_hash = ? AND ativo = 1
+        ''', (identificador, senha_hash)).fetchone()
+        
+        if loja:
+            session['loja_id'] = loja['id']
+            session['loja_nome'] = loja['nome']
+            session['loja_identificador'] = loja['identificador']
+            return jsonify({'success': True, 'loja': dict(loja)})
+        else:
+            return jsonify({'success': False, 'message': 'Loja ou senha incorretos'})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Rota do painel da loja (protegida)
+@app.route('/loja/painel')
+def loja_painel():
+    if 'loja_id' not in session:
+        return redirect(url_for('loja_login'))
+    return render_template('loja_painel.html')
+
+# API: Logout da loja
+@app.route('/api/loja/logout', methods=['POST'])
+def loja_logout():
+    session.pop('loja_id', None)
+    session.pop('loja_nome', None)
+    session.pop('loja_identificador', None)
+    return jsonify({'success': True})
+
+# Middleware para verificar se está logado (decorator)
+def loja_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'loja_id' not in session:
+            return jsonify({'error': 'Não autorizado'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ==================== FIM SISTEMA MULTI-LOJA ====================
+
 # Rotas para o Painel Admin
 @app.route('/')
 def admin_panel():
@@ -166,12 +267,13 @@ def criar_entrega():
     try:
         data = request.json
         db = get_db()
+        loja_id = session.get('loja_id', 1)  # Default 1 se não estiver logado
         
-        # INSERT básico apenas com campos obrigatórios
+        # INSERT básico apenas com campos obrigatórios + loja_id
         cursor = db.execute('''
-            INSERT INTO entregas (codigo_pedido, aplicativo_delivery)
-            VALUES (?, ?)
-        ''', (data['codigo_pedido'], data['aplicativo_delivery']))
+            INSERT INTO entregas (codigo_pedido, aplicativo_delivery, loja_id)
+            VALUES (?, ?, ?)
+        ''', (data['codigo_pedido'], data['aplicativo_delivery'], loja_id))
         
         entrega_id = cursor.lastrowid
         
@@ -226,16 +328,33 @@ def criar_entrega():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# API - Listar todas as entregas
+# API - Listar todas as entregas (com filtro por loja se logado)
 @app.route('/api/entregas', methods=['GET'])
 def listar_entregas():
     db = get_db()
     status = request.args.get('status', None)
+    loja_id = session.get('loja_id')  # Pegar loja da sessão
     
-    if status:
-        entregas = db.execute('SELECT * FROM entregas WHERE status = ? ORDER BY data_criacao DESC', (status,)).fetchall()
+    # Construir query com filtro de loja se estiver logado
+    if loja_id:
+        if status:
+            entregas = db.execute('''
+                SELECT * FROM entregas 
+                WHERE status = ? AND loja_id = ? 
+                ORDER BY data_criacao DESC
+            ''', (status, loja_id)).fetchall()
+        else:
+            entregas = db.execute('''
+                SELECT * FROM entregas 
+                WHERE loja_id = ? 
+                ORDER BY data_criacao DESC
+            ''', (loja_id,)).fetchall()
     else:
-        entregas = db.execute('SELECT * FROM entregas ORDER BY data_criacao DESC').fetchall()
+        # Admin vê todas as entregas
+        if status:
+            entregas = db.execute('SELECT * FROM entregas WHERE status = ? ORDER BY data_criacao DESC', (status,)).fetchall()
+        else:
+            entregas = db.execute('SELECT * FROM entregas ORDER BY data_criacao DESC').fetchall()
     
     return jsonify([dict(entrega) for entrega in entregas])
 
@@ -261,7 +380,7 @@ def iniciar_entrega(codigo_pedido):
             UPDATE entregas 
             SET motoboy_nome = ?, status = 'em_rota', data_inicio = ?
             WHERE codigo_pedido = ?
-        ''', (data['motoboy_nome'], datetime.now(), codigo_pedido))
+        ''', (data['motoboy_nome'], get_datetime_br(), codigo_pedido))
         
         db.commit()
         
@@ -340,7 +459,7 @@ def finalizar_entrega(codigo_pedido):
                 endereco_entrega = ?,
                 bairro = ?
             WHERE codigo_pedido = ?
-        ''', (datetime.now(), data['latitude'], data['longitude'], endereco, bairro, codigo_pedido))
+        ''', (get_datetime_br(), data['latitude'], data['longitude'], endereco, bairro, codigo_pedido))
         
         db.commit()
         
@@ -663,7 +782,7 @@ def cancelar_entrega(codigo_pedido):
                 pedido_pago = ?,
                 data_cancelamento = ?
             WHERE codigo_pedido = ?
-        ''', (data['motivo'], data.get('pedido_pago', False), datetime.now(), codigo_pedido))
+        ''', (data['motivo'], data.get('pedido_pago', False), get_datetime_br(), codigo_pedido))
         
         db.commit()
         
